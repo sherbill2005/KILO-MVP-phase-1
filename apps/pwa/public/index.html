@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kilo PWA</title>
+    <link rel="stylesheet" href="../styles/main.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1>Kilo</h1>
+      <button id="voicebtn">Voice: Off</button>
+      <p id="voiceStatus">Voice recognition is off.</p>
+      <p id="transcript">Transcript: None</p>
+      <button id="startBtn">Start Workout</button>
+      <p id="sessionStatus">No session yet.</p>
+
+      <section class="card">
+        <h2>Log Set (Manual)</h2>
+        <form id="setForm">
+          <input id="exercise" placeholder="Exercise" required />
+          <input id="weight" type="number" placeholder="Weight" required />
+          <select id="unit">
+            <option value="lb">lb</option>
+            <option value="kg">kg</option>
+          </select>
+          <input id="reps" type="number" placeholder="Reps" required />
+          <button type="submit">Add Set</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Live Table</h2>
+        <p class="hint">Tip: click a row to correct weight/reps.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Exercise</th>
+              <th>Weight</th>
+              <th>Reps</th>
+            </tr>
+          </thead>
+          <tbody id="setsBody"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script type="module" src="../src/app.js"></script>
+  </body>
+</html>

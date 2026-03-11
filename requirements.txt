@@ -1,0 +1,3 @@
+# JavaScript/Cloudflare Worker dependencies (source of truth: services/api-worker/package.json)
+@cloudflare/workers-types==4.20260305.1
+wrangler==4.71.0

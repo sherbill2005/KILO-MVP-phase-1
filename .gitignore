@@ -1,0 +1,33 @@
+# Node / JS
+node_modules/
+**/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+.dev.vars
+
+# Build / cache
+.dist/
+dist/
+build/
+coverage/
+.cache/
+
+# Cloudflare Wrangler
+.wrangler/
+**/.wrangler/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
