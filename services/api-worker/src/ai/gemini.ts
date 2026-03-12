@@ -1,9 +1,9 @@
 type GeminiResult = {
   transcript: string;
-  exercise: string | null;
-  weight: number | null;
-  unit: "kg" | "lb" | null;
-  reps: number | null;
+  workout: Array<{
+    exercise: string;
+    sets: Array<{ weight: number; unit: "kg" | "lb"; reps: number }>;
+  }>;
 };
 
 export type ParseAudioWithGeminiArgs = {
@@ -51,7 +51,8 @@ Rules:
 - Ignore irrelevant words.
 - Prefer exact matches from the list.
 - Only return JSON.
-- If missing exercise/weight/reps, return nulls.`;
+- Output a workout array with exercises and sets.
+- If sets are missing weights or reps, repeat the last known value.`;
 
   const generationConfig = {
     responseMimeType: "application/json",
@@ -59,12 +60,30 @@ Rules:
       type: "object",
       properties: {
         transcript: { type: "string" },
-        exercise: { type: "string", nullable: true },
-        weight: { type: "number", nullable: true },
-        unit: { type: "string", enum: ["kg", "lb"], nullable: true },
-        reps: { type: "number", nullable: true },
+        workout: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              exercise: { type: "string" },
+              sets: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    weight: { type: "number" },
+                    unit: { type: "string", enum: ["kg", "lb"] },
+                    reps: { type: "number" },
+                  },
+                  required: ["weight", "unit", "reps"],
+                },
+              },
+            },
+            required: ["exercise", "sets"],
+          },
+        },
       },
-      required: ["transcript", "exercise", "weight", "unit", "reps"],
+      required: ["transcript", "workout"],
     },
   };
 
@@ -104,21 +123,28 @@ Rules:
 
   const parsed = text ? extractJson(text) : null;
   if (!parsed) {
-    return {
-      transcript: text || "",
-      exercise: null,
-      weight: null,
-      unit: null,
-      reps: null,
-    };
+    return { transcript: text || "", workout: [] };
   }
+
+  const workout = Array.isArray(parsed.workout) ? parsed.workout : [];
+  const cleanedWorkout = workout
+    .filter((w: any) => w && typeof w.exercise === "string" && Array.isArray(w.sets))
+    .map((w: any) => ({
+      exercise: w.exercise,
+      sets: w.sets
+        .filter(
+          (s: any) =>
+            s &&
+            typeof s.weight === "number" &&
+            (s.unit === "kg" || s.unit === "lb") &&
+            typeof s.reps === "number"
+        )
+        .map((s: any) => ({ weight: s.weight, unit: s.unit, reps: s.reps })),
+    }))
+    .filter((w: any) => w.sets.length > 0);
 
   return {
     transcript: parsed.transcript ?? text ?? "",
-    exercise: parsed.exercise ?? null,
-    weight: typeof parsed.weight === "number" ? parsed.weight : null,
-    unit: parsed.unit === "kg" || parsed.unit === "lb" ? parsed.unit : null,
-    reps: typeof parsed.reps === "number" ? parsed.reps : null,
+    workout: cleanedWorkout,
   };
 }
-

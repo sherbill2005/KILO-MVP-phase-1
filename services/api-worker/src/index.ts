@@ -27,7 +27,7 @@ export default {
     headers: {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-      "access-control-allow-headers": "content-type",
+      "access-control-allow-headers": "content-type, x-exercise-context",
     },
   });
 }
@@ -113,6 +113,8 @@ export default {
             const mimeType = req.headers.get("content-type") || "audio/webm";
             const exerciseContext = req.headers.get("x-exercise-context") || "";
             const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+            // DEBUG: log context header (remove later)
+            console.log("[DEBUG] Exercise context:", exerciseContext);
 
             const result = await parseAudioWithGemini({
                 apiKey: env.GEMINI_API_KEY,
@@ -121,6 +123,8 @@ export default {
                 mimeType,
                 exerciseContext,
             });
+            // DEBUG: log Gemini output shape (remove later)
+            console.log("[DEBUG] Gemini result:", JSON.stringify(result));
 
             return json(result);
         }

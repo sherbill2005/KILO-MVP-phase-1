@@ -76,47 +76,42 @@ setupRecorder({
     }
 
     const data = await postAudioParse(audioBlob, exerciseContextList);
+    // DEBUG: log API response (remove later)
+    console.debug("[DEBUG] /ai/parse response:", data);
 
     if (transcriptEl) {
       transcriptEl.textContent = `Transcript: ${data.transcript || "(none)"}`;
     }
 
-    let exercise = data.exercise || null;
-    if (exercise) {
-      exercise = bestExerciseMatch(exercise);
-    } else if (data.transcript) {
-      const parsed = parseWorkoutText(data.transcript);
-      exercise = parsed?.exercise || null;
-      data.weight = data.weight ?? parsed?.weight ?? null;
-      data.unit = data.unit ?? parsed?.unit ?? null;
-      data.reps = data.reps ?? parsed?.reps ?? null;
-    }
-
-    if (!exercise || !data.weight || !data.reps) {
-      setText(voiceStatus, "Could not parse. Try again.");
+    if (!Array.isArray(data.workout) || data.workout.length === 0) {
+      setText(voiceStatus, "Could not parse workout. Try again.");
       return;
     }
 
-    document.getElementById("exercise").value = exercise;
-    document.getElementById("weight").value = data.weight;
-    document.getElementById("unit").value = data.unit || "lb";
-    document.getElementById("reps").value = data.reps;
-
-    const created = await postJson(`/sessions/${sessionId}/sets`, {
-      exercise_name: exercise,
-      weight_value: data.weight,
-      weight_unit: data.unit || "lb",
-      reps: data.reps,
-    });
-    addRow(setsBody, {
-      id: created.set_id,
-      exercise_name: exercise,
-      weight_value: data.weight,
-      weight_unit: data.unit || "lb",
-      reps: data.reps,
-    });
+    for (const ex of data.workout) {
+      const exercise = bestExerciseMatch(ex.exercise); 
+      if (!exercise) continue;
+      
+      for (const s of ex.sets || []) {
+        // DEBUG: log set before POST (remove later)
+        console.debug("[DEBUG] Logging set:", { exercise, ...s });
+        const created = await postJson(`/sessions/${sessionId}/sets`, {
+          exercise_name: exercise,
+          weight_value: s.weight,
+          weight_unit: s.unit,
+          reps: s.reps,
+        });
+        addRow(setsBody, {
+          id: created.set_id,
+          exercise_name: exercise,
+          weight_value: s.weight,
+          weight_unit: s.unit,
+          reps: s.reps,
+        });
+      }
+    }
     setForm.reset();
-    setText(voiceStatus, "Set logged.");
+    setText(voiceStatus, "Sets logged.");
   },
 });
 
@@ -144,4 +139,3 @@ setsBody.addEventListener("click", async (e) => {
     cells[2].textContent = updates.reps;
   }
 });
-
