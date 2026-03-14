@@ -1,6 +1,7 @@
 import type { WorkoutSession,WorkoutSet } from "../../../packages/shared/types/workoutModel";  
 import type { Env } from "./env";
 import { parseAudioWithGemini } from "./ai/gemini";
+import { handleLiveWs } from "./live/liveProxy";
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -33,6 +34,9 @@ export default {
 }
 
         const url = new URL(req.url);
+        if (req.method === "GET" && url.pathname === "/ws/ai/live") {
+            return handleLiveWs(req, env);
+        }
         if (req.method === "POST" && url.pathname === "/api/sessions") 
             {
             const body = (await req.json()) as { user_id: string; workout_date: string };
