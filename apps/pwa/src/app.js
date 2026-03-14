@@ -98,7 +98,10 @@ setupRecorder({
         const msg = JSON.parse(event.data);
         if (msg.type === "status") {
           if (msg.value === "processing") setText(voiceStatus, "Processing...");
-          if (msg.value === "error") setText(voiceStatus, "AI error.");
+          if (msg.value === "error") {
+            setText(voiceStatus, "AI error.");
+            if (liveSocket) liveSocket.close();
+          }
         }
         if (msg.type === "result" && Array.isArray(msg.workout)) {
           for (const ex of msg.workout) {
@@ -115,6 +118,7 @@ setupRecorder({
             }
           }
           setText(voiceStatus, "Logged.");
+          if (liveSocket) liveSocket.close();
         }
       } catch {
         // ignore non-json frames
@@ -134,7 +138,6 @@ setupRecorder({
       try {
         liveSocket.send(JSON.stringify({ type: "stop" }));
       } catch {}
-      liveSocket.close();
     }
     liveSocket = null;
     liveSocketReady = false;
