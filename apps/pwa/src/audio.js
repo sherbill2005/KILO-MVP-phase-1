@@ -1,45 +1,146 @@
+const SILENCE_SECONDS = 2;
+const SILENCE_THRESHOLD = 0.01;
+
+function createWorkletUrl() {
+  const workletCode = `
+    class Pcm16Processor extends AudioWorkletProcessor {
+      process(inputs) {
+        const input = inputs[0] && inputs[0][0];
+        if (!input || input.length === 0) return true;
+
+        let sum = 0;
+        for (let i = 0; i < input.length; i++) {
+          sum += input[i] * input[i];
+        }
+        const rms = Math.sqrt(sum / input.length);
+
+        const targetRate = 16000;
+        const ratio = sampleRate / targetRate;
+        const outLength = Math.floor(input.length / ratio);
+        const pcm = new Int16Array(outLength);
+
+        let offset = 0;
+        for (let i = 0; i < outLength; i++) {
+          const start = Math.floor(i * ratio);
+          const end = Math.min(Math.floor((i + 1) * ratio), input.length);
+          let acc = 0;
+          for (let j = start; j < end; j++) acc += input[j];
+          const avg = acc / Math.max(1, end - start);
+          const clamped = Math.max(-1, Math.min(1, avg));
+          pcm[i] = clamped * 0x7fff;
+        }
+
+        const duration = input.length / sampleRate;
+        this.port.postMessage({ type: "chunk", buffer: pcm.buffer, rms, duration }, [pcm.buffer]);
+        return true;
+      }
+    }
+    registerProcessor("pcm16-processor", Pcm16Processor);
+  `;
+
+  const blob = new Blob([workletCode], { type: "application/javascript" });
+  return URL.createObjectURL(blob);
+}
+
 export function setupRecorder({
   voiceBtn,
   voiceStatus,
-  onAudioBlob,
+  onPcmChunk,
+  onStart,
+  onStop,
 }) {
-  let mediaRecorder = null;
-  let audioChunks = [];
   let isRecording = false;
+  let audioCtx = null;
+  let source = null;
+  let workletNode = null;
+  let stream = null;
+  let silenceSeconds = 0;
+  let workletUrl = null;
 
   if (!voiceBtn) return;
+
+  async function start() {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new AudioContext();
+    workletUrl = createWorkletUrl();
+    await audioCtx.audioWorklet.addModule(workletUrl);
+
+    source = audioCtx.createMediaStreamSource(stream);
+    workletNode = new AudioWorkletNode(audioCtx, "pcm16-processor");
+
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0;
+
+    workletNode.port.onmessage = (event) => {
+      const { type, buffer, rms, duration } = event.data || {};
+      if (type !== "chunk") return;
+
+      if (typeof rms === "number" && typeof duration === "number") {
+        if (rms < SILENCE_THRESHOLD) {
+          silenceSeconds += duration;
+        } else {
+          silenceSeconds = 0;
+        }
+      }
+
+      if (silenceSeconds >= SILENCE_SECONDS) {
+        stop();
+        return;
+      }
+
+      if (buffer && onPcmChunk) {
+        onPcmChunk(buffer);
+      }
+    };
+
+    source.connect(workletNode);
+    workletNode.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    isRecording = true;
+    silenceSeconds = 0;
+    if (voiceBtn) voiceBtn.textContent = "Voice: On";
+    if (voiceStatus) voiceStatus.textContent = "Listening...";
+    if (onStart) onStart();
+  }
+
+  async function stop() {
+    if (!isRecording) return;
+    isRecording = false;
+
+    if (voiceBtn) voiceBtn.textContent = "Voice: Off";
+    if (voiceStatus) voiceStatus.textContent = "Processing...";
+
+    if (workletNode) {
+      workletNode.disconnect();
+      workletNode.port.onmessage = null;
+    }
+    if (source) source.disconnect();
+    if (audioCtx) await audioCtx.close();
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    if (workletUrl) URL.revokeObjectURL(workletUrl);
+
+    workletNode = null;
+    source = null;
+    audioCtx = null;
+    stream = null;
+    workletUrl = null;
+
+    if (onStop) onStop();
+  }
 
   voiceBtn.addEventListener("click", async () => {
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-
-        audioChunks = [];
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-          if (voiceStatus) {
-            voiceStatus.textContent = `Recorded ${Math.round(audioBlob.size / 1024)} KB`;
-          }
-          if (onAudioBlob) await onAudioBlob(audioBlob);
-        };
-
-        mediaRecorder.start();
-        isRecording = true;
-        voiceBtn.textContent = "Voice: On";
-        if (voiceStatus) voiceStatus.textContent = "Recording...";
+        await start();
       } catch (err) {
         if (voiceStatus) voiceStatus.textContent = "Mic access denied.";
         alert(err.message);
       }
     } else {
-      mediaRecorder.stop();
-      isRecording = false;
-      voiceBtn.textContent = "Voice: Off";
+      await stop();
     }
   });
 }
