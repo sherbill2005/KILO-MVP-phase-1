@@ -65,8 +65,6 @@ export function bestExerciseMatch(input) {
   }
 
   if (best.similarity < MIN_SIMILARITY) {
-    // DEBUG: no strong exercise match found
-    console.warn("[DEBUG] No strong match for exercise:", input, "best:", best);
     return null;
   }
   return best.name;

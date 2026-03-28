@@ -1,8 +1,8 @@
 import { postJson, patchJson } from "./api.js";
-import { loadExercises, bestExerciseMatch } from "./exercises.js";
+import { loadExercises } from "./exercises.js";
 import { addRow, setText } from "./ui.js";
 import { setupRecorder } from "./audio.js";
-import { openLiveSocket } from "./ws.js";
+import { createLiveSessionController } from "./liveSession.js";
 
 const startBtn = document.getElementById("startBtn");
 const sessionStatus = document.getElementById("sessionStatus");
@@ -10,12 +10,10 @@ const setForm = document.getElementById("setForm");
 const setsBody = document.getElementById("setsBody");
 const voiceBtn = document.getElementById("voicebtn");
 const voiceStatus = document.getElementById("voiceStatus");
+const transcriptEl = document.getElementById("transcript");
 
 let sessionId = null;
 let exerciseContextList = [];
-let liveSocket = null;
-let liveSocketReady = false;
-let pendingChunks = [];
 
 loadExercises().then((list) => {
   exerciseContextList = Array.isArray(list) ? list.slice(0, 30) : [];
@@ -71,81 +69,13 @@ setForm.addEventListener("submit", async (e) => {
 setupRecorder({
   voiceBtn,
   voiceStatus,
-  onStart: () => {
-    if (!sessionId) {
-      setText(voiceStatus, "Start a workout first.");
-      return;
-    }
-
-    liveSocket = openLiveSocket();
-    liveSocket.binaryType = "arraybuffer";
-    liveSocketReady = false;
-    pendingChunks = [];
-
-    liveSocket.addEventListener("open", () => {
-      liveSocketReady = true;
-      liveSocket.send(JSON.stringify({ type: "session", session_id: sessionId }));
-      liveSocket.send(
-        JSON.stringify({ type: "context", exercises: exerciseContextList })
-      );
-      for (const chunk of pendingChunks) {
-        liveSocket.send(chunk);
-      }
-      pendingChunks = [];
-    });
-
-    liveSocket.addEventListener("message", (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "status") {
-          if (msg.value === "processing") setText(voiceStatus, "Processing...");
-          if (msg.value === "error") {
-            setText(voiceStatus, "AI error.");
-            if (liveSocket) liveSocket.close();
-          }
-        }
-        if (msg.type === "result" && Array.isArray(msg.workout)) {
-          if (transcriptEl && msg.transcript) {
-            transcriptEl.textContent = `Transcript: ${msg.transcript}`;
-          }
-          for (const ex of msg.workout) {
-            const exercise = bestExerciseMatch(ex.exercise);
-            if (!exercise) continue;
-            for (const s of ex.sets || []) {
-              addRow(setsBody, {
-                id: null,
-                exercise_name: exercise,
-                weight_value: s.weight,
-                weight_unit: s.unit,
-                reps: s.reps,
-              });
-            }
-          }
-          setText(voiceStatus, "Logged.");
-          if (liveSocket) liveSocket.close();
-        }
-      } catch {
-        // ignore non-json frames
-      }
-    });
-  },
-  onPcmChunk: (buffer) => {
-    if (!liveSocket) return;
-    if (liveSocketReady) {
-      liveSocket.send(buffer);
-    } else {
-      pendingChunks.push(buffer);
-    }
-  },
-  onStop: () => {
-    if (liveSocket) {
-      try {
-        liveSocket.send(JSON.stringify({ type: "stop" }));
-      } catch {}
-    }
-    liveSocket = null;
-    liveSocketReady = false;
-  },
+  ...createLiveSessionController({
+    voiceStatus,
+    setsBody,
+    transcriptEl,
+    getSessionId: () => sessionId,
+    getExerciseContext: () => exerciseContextList,
+  }),
 });
 
 setsBody.addEventListener("click", async (e) => {

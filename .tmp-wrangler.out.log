@@ -1,0 +1,16 @@
+
+ ⛅️ wrangler 4.71.0 (update available 4.78.0)
+─────────────────────────────────────────────
+Using secrets defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                    Resource                  Mode
+env.KILO_KV (1893d3fe037840f582c9edfd1939ec0c)             KV Namespace              local
+env.GEMINI_API_KEY ("(hidden)")                            Environment Variable      local
+env.GEMINI_MODEL ("(hidden)")                              Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://127.0.0.1:8787
+⎔ Reloading local server...
+⎔ Local server updated and ready
+⎔ Reloading local server...
+⎔ Local server updated and ready
