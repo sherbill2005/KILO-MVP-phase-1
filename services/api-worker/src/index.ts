@@ -1,6 +1,8 @@
-import type { WorkoutSession,WorkoutSet } from "../../../packages/shared/types/workoutModel";  
+import type { WorkoutSession, WorkoutSet, WorkoutGroup } from "../../../packages/shared/types/workoutModel";  
+import { validateBatchPayload } from "./validation.js";    
 import type { Env } from "./env";
 import { parseAudioWithGemini } from "./ai/gemini";
+import { handleLiveWs } from "./live/liveProxy.ts";
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -34,7 +36,7 @@ export default {
 
         const url = new URL(req.url);
         if (req.method === "POST" && url.pathname === "/api/sessions") 
-            {
+        {
             const body = (await req.json()) as { user_id: string; workout_date: string };
             console.log("GEMINI_API_KEY present:", Boolean(env.GEMINI_API_KEY));
             //validate body 
@@ -49,6 +51,7 @@ export default {
                     id: crypto.randomUUID(),
                     user_id: body.user_id,
                     workout_date: body.workout_date,
+                    group_ids: [],
                     set_ids: [],
                     finished: false,
                 
@@ -58,37 +61,70 @@ export default {
         }
         // Sets Endpoint 
         const match = url.pathname.match(/^\/api\/sessions\/([^\/]+)\/sets$/);
-        if (req.method === "POST" && match) { 
+        if (req.method === "POST" && match) {
             const session_id = match[1];
             // Check if session exists
             const raw = await env.KILO_KV.get(`session:${session_id}`);
             if (!raw) {
                 return text("Session not found", 404);
             }
-            const body = (await req.json()) as { exercise_name: string; weight_value: number; weight_unit: "kg" | "lb"; reps: number };
-            // Validate body 
-            if (typeof body.exercise_name !== "string" || body.exercise_name.trim() === "") { 
-                return text("Invalid exercise_name", 400);
-            }
-            if (typeof body.weight_unit !== "string" || (body.weight_unit !== "kg" && body.weight_unit !== "lb")) {
-                return text("Invalid weight_unit", 400);
-            }
-            if (typeof body.weight_value !== "number" || body.weight_value <= 0 || typeof body.reps !== "number" || body.reps <= 0) { 
-                return text("Invalid weight_value or reps must be a positive number", 400);
-            }
-            const set: WorkoutSet = {
-                id: crypto.randomUUID(),
-                session_id,
+            const body = (await req.json()) as any;
+            const batch = Array.isArray(body.sets) ? body : {
                 exercise_name: body.exercise_name,
-                weight_value: body.weight_value,
-                weight_unit: body.weight_unit,
-                reps: body.reps,
-                corrected: false,
+                sets: [{
+                    weight_value: body.weight_value,
+                    weight_unit: body.weight_unit,
+                    reps: body.reps,
+                }]
+            };
+
+            // Validate body 
+            const validation = validateBatchPayload(batch);
+            if (!validation.ok) {
+                return text(validation.message || "Invalid batch payload", 400);
+            }
+
+            const session = JSON.parse(raw) as WorkoutSession;
+            if (!Array.isArray(session.group_ids)) session.group_ids = [];
+            const group_id = crypto.randomUUID();
+            const set_ids: string[] = [];
+            for (let i = 0; i < batch.sets.length; i++) {
+                const s = batch.sets[i];
+                const set: WorkoutSet = {
+                    id: crypto.randomUUID(),
+                    session_id,
+                    group_id,
+                    group_index: i + 1,
+                    exercise_name: batch.exercise_name,
+                    weight_value: s.weight_value,
+                    weight_unit: s.weight_unit,
+                    reps: s.reps,
+                    corrected: false,
+                    created_at: new Date().toISOString(),
+                };
+                await env.KILO_KV.put(`set:${set.id}`, JSON.stringify(set));
+                set_ids.push(set.id);
+            }
+            const group: WorkoutGroup = {
+                id: group_id,
+                session_id,
+                exercise_name: batch.exercise_name,
+                set_ids: set_ids,
                 created_at: new Date().toISOString(),
             };
-            await env.KILO_KV.put(`set:${set.id}`, JSON.stringify(set));
-            return json({ set_id: set.id });
+            await env.KILO_KV.put(`group:${group_id}`, JSON.stringify(group));
+            session.set_ids.push(...set_ids);
+            session.group_ids.push(group_id);
+            await env.KILO_KV.put(`session:${session_id}`, JSON.stringify(session));
+            return json(
+                     batch.sets.length === 1
+                    ? { set_id: set_ids[0], group_id }
+                    : { group_id, set_ids }
+);
+            
         }
+           
+        
         // Patch Session Endpoint
         const patchMatch = url.pathname.match(/^\/api\/sets\/([^\/]+)$/);
         if (req.method === "PATCH" && patchMatch) {
@@ -128,7 +164,14 @@ export default {
 
             return json(result);
         }
-        return text("Not Found", 404);
+       
+        if (req.method === "GET" && url.pathname === "/ws/ai/live") {
+            // This is a placeholder for the WebSocket endpoint. Implementing a full WebSocket server in a Cloudflare Worker is non-trivial and may require using Durable Objects or an external service. For now, we can return a 501 Not Implemented status.
+            return handleLiveWs(req, env);
+         
+        }
+         return text("Not Found", 404);
+
 
 
         }

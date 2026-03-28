@@ -1,8 +1,8 @@
-import { postJson, patchJson, postAudioParse } from "./api.js";
-import { loadExercises, bestExerciseMatch } from "./exercises.js";
-import { parseWorkoutText } from "./parser.js";
+import { postJson, patchJson } from "./api.js";
+import { loadExercises } from "./exercises.js";
 import { addRow, setText } from "./ui.js";
 import { setupRecorder } from "./audio.js";
+import { openLiveSocket } from "./ws.js";
 
 const startBtn = document.getElementById("startBtn");
 const sessionStatus = document.getElementById("sessionStatus");
@@ -10,10 +10,12 @@ const setForm = document.getElementById("setForm");
 const setsBody = document.getElementById("setsBody");
 const voiceBtn = document.getElementById("voicebtn");
 const voiceStatus = document.getElementById("voiceStatus");
-const transcriptEl = document.getElementById("transcript");
 
 let sessionId = null;
 let exerciseContextList = [];
+let liveSocket = null;
+let liveSocketReady = false;
+let pendingChunks = [];
 
 loadExercises().then((list) => {
   exerciseContextList = Array.isArray(list) ? list.slice(0, 30) : [];
@@ -69,49 +71,122 @@ setForm.addEventListener("submit", async (e) => {
 setupRecorder({
   voiceBtn,
   voiceStatus,
-  onAudioBlob: async (audioBlob) => {
+  onStart: () => {
     if (!sessionId) {
       setText(voiceStatus, "Start a workout first.");
       return;
     }
 
-    const data = await postAudioParse(audioBlob, exerciseContextList);
-    // DEBUG: log API response (remove later)
-    console.debug("[DEBUG] /ai/parse response:", data);
-
-    if (transcriptEl) {
-      transcriptEl.textContent = `Transcript: ${data.transcript || "(none)"}`;
+    if (liveSocket) {
+      try {
+        liveSocket.close();
+      } catch {}
     }
 
-    if (!Array.isArray(data.workout) || data.workout.length === 0) {
-      setText(voiceStatus, "Could not parse workout. Try again.");
-      return;
-    }
+    liveSocket = openLiveSocket();
+    liveSocket.binaryType = "arraybuffer";
+    liveSocketReady = false;
+    pendingChunks = [];
 
-    for (const ex of data.workout) {
-      const exercise = bestExerciseMatch(ex.exercise); 
-      if (!exercise) continue;
-      
-      for (const s of ex.sets || []) {
-        // DEBUG: log set before POST (remove later)
-        console.debug("[DEBUG] Logging set:", { exercise, ...s });
-        const created = await postJson(`/sessions/${sessionId}/sets`, {
-          exercise_name: exercise,
-          weight_value: s.weight,
-          weight_unit: s.unit,
-          reps: s.reps,
-        });
-        addRow(setsBody, {
-          id: created.set_id,
-          exercise_name: exercise,
-          weight_value: s.weight,
-          weight_unit: s.unit,
-          reps: s.reps,
-        });
+    liveSocket.addEventListener("open", () => {
+      if (!liveSocket) return;
+      liveSocket.send(
+        JSON.stringify({
+          type: "session",
+          session_id: sessionId,
+        })
+      );
+    });
+
+    liveSocket.addEventListener("error", (err) => {
+      console.error("WebSocket error:", err);
+    });
+
+    liveSocket.addEventListener("close", () => {
+      liveSocket = null;
+      liveSocketReady = false;
+      pendingChunks = [];
+    });
+
+    liveSocket.addEventListener("message", (event) => {
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
       }
+
+      if (msg.type === "ack") {
+        if (!liveSocket) return;
+        liveSocket.send(
+          JSON.stringify({
+            type: "context",
+            exercises: exerciseContextList,
+          })
+        );
+      }
+
+      if (msg.type === "ack_context") {
+        console.log("Exercise context acknowledged by server.");
+        liveSocketReady = true;
+        for (const chunk of pendingChunks) {
+          if (!liveSocket) return;
+          liveSocket.send(chunk);
+        }
+        pendingChunks = [];
+      }
+
+      if (msg.type === "status") {
+        if (msg.value === "processing") {
+          setText(voiceStatus, "Processing...");
+        }
+        if (msg.value === "no_match") {
+          setText(voiceStatus, "Could not parse workout. Try again.");
+          liveSocket = null;
+          liveSocketReady = false;
+          pendingChunks = [];
+        }
+        if (msg.value === "error") {
+          setText(voiceStatus, "AI error.");
+          liveSocket = null;
+          liveSocketReady = false;
+          pendingChunks = [];
+        }
+      }
+
+      if (msg.type === "result") {
+        for (const ex of msg.workout || []) {
+          for (const set of ex.sets || []) {
+            addRow(setsBody, {
+              id: null,
+              exercise_name: ex.exercise,
+              weight_value: set.weight,
+              weight_unit: set.unit,
+              reps: set.reps,
+            });
+          }
+        }
+
+        setText(voiceStatus, "Logged.");
+        liveSocket = null;
+        liveSocketReady = false;
+        pendingChunks = [];
+      }
+    });
+  },
+  onPcmChunk: (buffer) => {
+    if (!liveSocket) return;
+    if (liveSocketReady) {
+      liveSocket.send(buffer);
+    } else {
+      pendingChunks.push(buffer);
     }
-    setForm.reset();
-    setText(voiceStatus, "Sets logged.");
+  },
+  onStop: () => {
+    if (!liveSocket) return;
+    try {
+      liveSocket.send(JSON.stringify({ type: "stop" }));
+    } catch {}
   },
 });
 

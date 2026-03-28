@@ -1,2 +1,6 @@
-PATCH /api/sets/{id} (corrections)
-PWA UI (start button + log set)
+add the WebSocket route in the Worker
+add the live proxy skeleton
+add the browser WebSocket client
+add PCM audio capture
+add Gemini message parsing
+connect parsed JSON to workout logging

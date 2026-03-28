@@ -15,6 +15,9 @@ export async function postJson(path, body) {
 
   return res.json();
 }
+export async function postSetsBatch(sessionId, exercise, sets) {
+  return postJson(`/session/${sessionId}/sets`, {exercise_name: exercise, sets });
+}
 
 export async function patchJson(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {

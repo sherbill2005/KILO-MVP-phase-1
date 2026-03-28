@@ -1,0 +1,48 @@
+<h2>Live API Flow (High-Performance)</h2>
+<p class="subtitle">WebSocket streaming from browser ? Worker ? Gemini Live API</p>
+
+<div class="mockup">
+  <div class="mockup-header">Streaming Architecture</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <div class="card" style="min-width:180px;" data-choice="browser">
+        <div class="card-body">
+          <h3>Browser (PWA)</h3>
+          <p>Mic audio ? small chunks</p>
+          <p>WebSocket ? Worker</p>
+        </div>
+      </div>
+      <div style="font-size:24px;">??</div>
+      <div class="card" style="min-width:180px;" data-choice="worker">
+        <div class="card-body">
+          <h3>Worker Proxy</h3>
+          <p>WS from browser</p>
+          <p>WS to Gemini Live</p>
+          <p>Pass-through + auth</p>
+        </div>
+      </div>
+      <div style="font-size:24px;">??</div>
+      <div class="card" style="min-width:180px;" data-choice="gemini">
+        <div class="card-body">
+          <h3>Gemini Live API</h3>
+          <p>Native audio model</p>
+          <p>Turn detection</p>
+          <p>JSON output</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <p><strong>Return path:</strong> Gemini ? Worker ? Browser (JSON workout)</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>What Changes in Kilo</h3>
+  <ul>
+    <li>Browser sends audio chunks continuously</li>
+    <li>Worker opens a WebSocket to Gemini Live API</li>
+    <li>Gemini decides when speech ends (turn detection)</li>
+    <li>Browser receives structured JSON (multi-set)</li>
+  </ul>
+</div>
