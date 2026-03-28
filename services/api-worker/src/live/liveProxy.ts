@@ -26,6 +26,52 @@ function extractJson(text: string) {
   }
 }
 
+function getGeminiDebugPayload(msg: any) {
+  if (!msg || typeof msg !== "object") return null;
+  if (msg.setupComplete || msg.setup_complete) {
+    return { setupComplete: true };
+  }
+
+  const serverContent = msg.serverContent || msg.server_content;
+  if (!serverContent) return null;
+
+  const inputText =
+    serverContent.inputTranscription?.text ||
+    serverContent.input_transcription?.text;
+  if (inputText) {
+    return { serverContent: { inputTranscription: { text: inputText } } };
+  }
+
+  const outputText =
+    serverContent.outputTranscription?.text ||
+    serverContent.output_transcription?.text;
+  if (outputText) {
+    return { serverContent: { outputTranscription: { text: outputText } } };
+  }
+
+  const parts =
+    serverContent.modelTurn?.parts || serverContent.model_turn?.parts || [];
+  const textParts = parts
+    .filter((part: any) => typeof part?.text === "string" && part.text.trim())
+    .map((part: any) => ({ text: part.text }));
+  if (textParts.length > 0) {
+    return { serverContent: { modelTurn: { parts: textParts } } };
+  }
+
+  if (serverContent.turnComplete || serverContent.turn_complete) {
+    return {
+      serverContent: { turnComplete: true },
+      usageMetadata: msg.usageMetadata || msg.usage_metadata,
+    };
+  }
+
+  if (serverContent.generationComplete || serverContent.generation_complete) {
+    return { serverContent: { generationComplete: true } };
+  }
+
+  return null;
+}
+
 async function logWorkout(env: Env, sessionId: string, workout: any[]) {
   const raw = await env.KILO_KV.get(`session:${sessionId}`);
   if (!raw) throw new Error("Session not found");
@@ -103,14 +149,33 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
   let setupSent = false;
   let setupComplete = false;
   let accumulatedText = "";
+  let inputTranscript = "";
+  let outputTranscript = "";
+  let activityStarted = false;
   let contextReceived = false;
 
   const model = env.GEMINI_LIVE_MODEL || env.GEMINI_MODEL || "gemini-2.5-flash-native-audio-preview-12-2025";
   const url =
-    "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent" +
+    "https://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent" +
     `?key=${env.GEMINI_API_KEY}`;
 
-  const gemini = new WebSocket(url);
+  const geminiResp = await fetch(url, {
+    headers: { Upgrade: "websocket" },
+  });
+  const gemini = geminiResp.webSocket;
+  if (!gemini) {
+    sendClientMessage({ type: "status", value: "error" });
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  gemini.accept();
+  gemini.addEventListener("error", (e) => {
+    console.error("[live] gemini WS error", e);
+  });
+  gemini.addEventListener("close", (e) => {
+    if (e.code !== 1000) {
+      console.error("[live] gemini WS close", e.code, e.reason);
+    }
+  });
 
   function sendClientMessage(message: WorkerToClientMessage) {
     worker.send(JSON.stringify(message));
@@ -119,20 +184,35 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
   function sendSetup() {
     if (setupSent) return;
     setupSent = true;
-    const instruction = `You are a specialized parser. Your only world exists within this list of exercises:\n${exerciseContext.join(",")}\n\nRules:\n- Ignore irrelevant words.\n- Prefer exact matches from the list.\n- Only return JSON.\n- Output a workout array with exercises and sets.\n- If sets are missing weights or reps, repeat the last known value.`;
+    const instruction = `You are a specialized parser. Your only world exists within this list of exercises:\n${exerciseContext.join(",")}\n\nRules:\n- Ignore irrelevant words.\n- Prefer exact matches from the list.\n- SPEAK ONLY JSON. No extra words.\n- Output schema: {"workout":[{"exercise":"...","sets":[{"weight":0,"unit":"kg|lb","reps":0}]}]}\n- If sets are missing weights or reps, repeat the last known value.\n- If no clear workout is present, SPEAK {"error":"no_match"} only.`;
 
     const setup = {
       setup: {
         model: `models/${model}`,
-        systemInstruction: { parts: [{ text: instruction }] },
-        realtimeInputConfig: {
-          automaticActivityDetection: {
-            silenceDurationMs: 2000,
+        // Native audio models only support AUDIO response modality.
+        // We rely on output_audio_transcription for text. See:
+        // https://ai.google.dev/gemini-api/docs/live-api/capabilities#response_modalities
+        generation_config: { response_modalities: ["AUDIO"] },
+        system_instruction: { parts: [{ text: instruction }] },
+        input_audio_transcription: {},
+        output_audio_transcription: {},
+        realtime_input_config: {
+          automatic_activity_detection: {
+            disabled: true,
           },
         },
       },
     };
     gemini.send(JSON.stringify(setup));
+    // Live WebSocket docs don't guarantee a setupComplete event.
+    setupComplete = true;
+    if (buffered.length) {
+      for (const chunk of buffered) {
+        sendAudio(chunk);
+      }
+      buffered = [];
+      bufferedBytes = 0;
+    }
   }
 
   function bufferAudio(chunk: ArrayBuffer) {
@@ -149,11 +229,17 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
       bufferAudio(chunk);
       return;
     }
+    if (!activityStarted) {
+      const startMsg = { realtime_input: { activity_start: {} } };
+      gemini.send(JSON.stringify(startMsg));
+      activityStarted = true;
+    }
+    // DEBUG: forwarding audio to Gemini (remove later)
     const data = arrayBufferToBase64(chunk);
     const msg = {
-      realtimeInput: {
+      realtime_input: {
         audio: {
-          mimeType: AUDIO_MIME,
+          mime_type: AUDIO_MIME,
           data,
         },
       },
@@ -168,28 +254,76 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
   });
 
   gemini.addEventListener("message", async (event) => {
-    const msg = JSON.parse(event.data);
-
-    if (msg.setupComplete) {
-      setupComplete = true;
-      sendClientMessage({ type: "status", value: "listening" });
-      for (const chunk of buffered) {
-        sendAudio(chunk);
+    let msg: any;
+    if (typeof event.data === "string") {
+      try {
+        msg = JSON.parse(event.data);
+      } catch (err) {
+        console.error("[live] gemini msg parse error", err);
+        return;
       }
-      buffered = [];
-      bufferedBytes = 0;
+    } else if (event.data instanceof ArrayBuffer) {
+      // Gemini may send JSON text frames as binary or audio bytes.
+      const text = new TextDecoder("utf-8").decode(new Uint8Array(event.data));
+      if (text.trim().startsWith("{")) {
+        try {
+          msg = JSON.parse(text);
+        } catch (err) {
+          console.error("[live] gemini binary parse error", err);
+          return;
+        }
+      } else {
+        return;
+      }
+    } else {
       return;
     }
 
-    if (msg.serverContent?.modelTurn?.parts) {
-      for (const part of msg.serverContent.modelTurn.parts) {
+    const debugPayload = getGeminiDebugPayload(msg);
+    if (debugPayload) {
+      const rawType = typeof event.data;
+      const ctor = (event.data as any)?.constructor?.name;
+      console.log("[DEBUG][LIVE] gemini msg type:", rawType, ctor || "");
+      try {
+        console.log("[DEBUG][LIVE] gemini msg:", JSON.stringify(debugPayload).slice(0, 500));
+      } catch {}
+    }
+
+    if (msg.setupComplete || msg.setup_complete) {
+      setupComplete = true;
+      sendClientMessage({ type: "status", value: "listening" });
+      return;
+    }
+
+    const serverContent = msg.serverContent || msg.server_content;
+    if (serverContent?.modelTurn?.parts || serverContent?.model_turn?.parts) {
+      const parts =
+        serverContent.modelTurn?.parts || serverContent.model_turn?.parts || [];
+      for (const part of parts) {
         if (part.text) accumulatedText += part.text;
       }
     }
 
-    if (msg.serverContent?.turnComplete) {
-      const parsed = extractJson(accumulatedText);
+    if (serverContent?.inputTranscription?.text || serverContent?.input_transcription?.text) {
+      inputTranscript +=
+        serverContent.inputTranscription?.text ||
+        serverContent.input_transcription?.text ||
+        "";
+    }
+    if (serverContent?.outputTranscription?.text || serverContent?.output_transcription?.text) {
+      outputTranscript +=
+        serverContent.outputTranscription?.text ||
+        serverContent.output_transcription?.text ||
+        "";
+    }
+
+    if (serverContent?.turnComplete || serverContent?.turn_complete) {
+      const textSource = outputTranscript || accumulatedText;
+      const parsed = extractJson(textSource);
+      const transcript = inputTranscript || "";
       accumulatedText = "";
+      inputTranscript = "";
+      outputTranscript = "";
 
       if (parsed && Array.isArray(parsed.workout)) {
         try {
@@ -204,6 +338,7 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
             workout: parsed.workout,
             group_ids: logged.group_ids,
             set_ids: logged.set_ids,
+            transcript,
           });
         } catch (err) {
           console.error("[live] log error", err);
@@ -232,17 +367,30 @@ export async function handleLiveWs(req: Request, env: Env): Promise<Response> {
       }
       if (msg.type === "stop") {
         sendClientMessage({ type: "status", value: "processing" });
-        const stopMsg = { realtimeInput: { audioStreamEnd: true } };
-        gemini.send(JSON.stringify(stopMsg));
+        if (activityStarted) {
+          const stopMsg = { realtime_input: { activity_end: {} } };
+          gemini.send(JSON.stringify(stopMsg));
+          activityStarted = false;
+        }
       }
       return;
     }
 
+    let audioBuffer: ArrayBuffer | null = null;
     if (event.data instanceof ArrayBuffer) {
+      audioBuffer = event.data;
+    } else if (ArrayBuffer.isView(event.data)) {
+      const view = event.data as ArrayBufferView;
+      audioBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+    } else if (event.data instanceof Blob) {
+      audioBuffer = await event.data.arrayBuffer();
+    }
+
+    if (audioBuffer) {
       if (!sessionId) {
-        bufferAudio(event.data);
+        bufferAudio(audioBuffer);
       } else {
-        sendAudio(event.data);
+        sendAudio(audioBuffer);
       }
     }
   });

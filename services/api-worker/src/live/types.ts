@@ -4,4 +4,10 @@ export type ClientToWorkerMessage =
 
 export type WorkerToClientMessage =
   | { type: "status"; value: "listening" | "processing" | "error" }
-  | { type: "result"; workout: unknown[]; group_ids: string[]; set_ids: string[] };
+  | {
+      type: "result";
+      workout: unknown[];
+      group_ids: string[];
+      set_ids: string[];
+      transcript?: string;
+    };

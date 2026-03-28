@@ -1,18 +1,9 @@
-const SILENCE_SECONDS = 2;
-const SILENCE_THRESHOLD = 0.01;
-
 function createWorkletUrl() {
   const workletCode = `
     class Pcm16Processor extends AudioWorkletProcessor {
       process(inputs) {
         const input = inputs[0] && inputs[0][0];
         if (!input || input.length === 0) return true;
-
-        let sum = 0;
-        for (let i = 0; i < input.length; i++) {
-          sum += input[i] * input[i];
-        }
-        const rms = Math.sqrt(sum / input.length);
 
         const targetRate = 16000;
         const ratio = sampleRate / targetRate;
@@ -30,8 +21,7 @@ function createWorkletUrl() {
           pcm[i] = clamped * 0x7fff;
         }
 
-        const duration = input.length / sampleRate;
-        this.port.postMessage({ type: "chunk", buffer: pcm.buffer, rms, duration }, [pcm.buffer]);
+        this.port.postMessage({ type: "chunk", buffer: pcm.buffer }, [pcm.buffer]);
         return true;
       }
     }
@@ -54,7 +44,6 @@ export function setupRecorder({
   let source = null;
   let workletNode = null;
   let stream = null;
-  let silenceSeconds = 0;
   let workletUrl = null;
 
   if (!voiceBtn) return;
@@ -63,7 +52,17 @@ export function setupRecorder({
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioCtx = new AudioContext();
     workletUrl = createWorkletUrl();
-    await audioCtx.audioWorklet.addModule(workletUrl);
+    if (!audioCtx.audioWorklet || !audioCtx.audioWorklet.addModule) {
+      throw new Error("AudioWorklet not supported in this browser.");
+    }
+    try {
+      await audioCtx.audioWorklet.addModule(workletUrl);
+      // DEBUG: confirm worklet module loaded (remove later)
+      console.log("[DEBUG][AUDIO] worklet module loaded");
+    } catch (err) {
+      console.error("[DEBUG][AUDIO] worklet addModule failed:", err);
+      throw err;
+    }
 
     source = audioCtx.createMediaStreamSource(stream);
     workletNode = new AudioWorkletNode(audioCtx, "pcm16-processor");
@@ -72,21 +71,8 @@ export function setupRecorder({
     gain.gain.value = 0;
 
     workletNode.port.onmessage = (event) => {
-      const { type, buffer, rms, duration } = event.data || {};
+      const { type, buffer } = event.data || {};
       if (type !== "chunk") return;
-
-      if (typeof rms === "number" && typeof duration === "number") {
-        if (rms < SILENCE_THRESHOLD) {
-          silenceSeconds += duration;
-        } else {
-          silenceSeconds = 0;
-        }
-      }
-
-      if (silenceSeconds >= SILENCE_SECONDS) {
-        stop();
-        return;
-      }
 
       if (buffer && onPcmChunk) {
         onPcmChunk(buffer);
@@ -98,7 +84,6 @@ export function setupRecorder({
     gain.connect(audioCtx.destination);
 
     isRecording = true;
-    silenceSeconds = 0;
     if (voiceBtn) voiceBtn.textContent = "Voice: On";
     if (voiceStatus) voiceStatus.textContent = "Listening...";
     if (onStart) onStart();

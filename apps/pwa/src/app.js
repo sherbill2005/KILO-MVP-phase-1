@@ -10,6 +10,7 @@ const setForm = document.getElementById("setForm");
 const setsBody = document.getElementById("setsBody");
 const voiceBtn = document.getElementById("voicebtn");
 const voiceStatus = document.getElementById("voiceStatus");
+const transcriptEl = document.getElementById("transcript");
 
 let sessionId = null;
 let exerciseContextList = [];
@@ -78,6 +79,7 @@ setupRecorder({
     }
 
     liveSocket = openLiveSocket();
+    liveSocket.binaryType = "arraybuffer";
     liveSocketReady = false;
     pendingChunks = [];
 
@@ -104,6 +106,9 @@ setupRecorder({
           }
         }
         if (msg.type === "result" && Array.isArray(msg.workout)) {
+          if (transcriptEl && msg.transcript) {
+            transcriptEl.textContent = `Transcript: ${msg.transcript}`;
+          }
           for (const ex of msg.workout) {
             const exercise = bestExerciseMatch(ex.exercise);
             if (!exercise) continue;
