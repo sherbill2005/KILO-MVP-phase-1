@@ -1,5 +1,5 @@
 import { postJson, patchJson } from "./api.js";
-import { loadExercises } from "./exercises.js";
+import { loadExercises, bestExerciseMatch } from "./exercises.js";
 import { addRow, setText } from "./ui.js";
 import { setupRecorder } from "./audio.js";
 import { openLiveSocket } from "./ws.js";
@@ -77,100 +77,55 @@ setupRecorder({
       return;
     }
 
-    if (liveSocket) {
-      try {
-        liveSocket.close();
-      } catch {}
-    }
-
     liveSocket = openLiveSocket();
     liveSocket.binaryType = "arraybuffer";
     liveSocketReady = false;
     pendingChunks = [];
 
     liveSocket.addEventListener("open", () => {
-      if (!liveSocket) return;
+      liveSocketReady = true;
+      liveSocket.send(JSON.stringify({ type: "session", session_id: sessionId }));
       liveSocket.send(
-        JSON.stringify({
-          type: "session",
-          session_id: sessionId,
-        })
+        JSON.stringify({ type: "context", exercises: exerciseContextList })
       );
-    });
-
-    liveSocket.addEventListener("error", (err) => {
-      console.error("WebSocket error:", err);
-    });
-
-    liveSocket.addEventListener("close", () => {
-      liveSocket = null;
-      liveSocketReady = false;
+      for (const chunk of pendingChunks) {
+        liveSocket.send(chunk);
+      }
       pendingChunks = [];
     });
 
     liveSocket.addEventListener("message", (event) => {
-      let msg;
       try {
-        msg = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-
-      if (msg.type === "ack") {
-        if (!liveSocket) return;
-        liveSocket.send(
-          JSON.stringify({
-            type: "context",
-            exercises: exerciseContextList,
-          })
-        );
-      }
-
-      if (msg.type === "ack_context") {
-        console.log("Exercise context acknowledged by server.");
-        liveSocketReady = true;
-        for (const chunk of pendingChunks) {
-          if (!liveSocket) return;
-          liveSocket.send(chunk);
-        }
-        pendingChunks = [];
-      }
-
-      if (msg.type === "status") {
-        if (msg.value === "processing") {
-          setText(voiceStatus, "Processing...");
-        }
-        if (msg.value === "no_match") {
-          setText(voiceStatus, "Could not parse workout. Try again.");
-          liveSocket = null;
-          liveSocketReady = false;
-          pendingChunks = [];
-        }
-        if (msg.value === "error") {
-          setText(voiceStatus, "AI error.");
-          liveSocket = null;
-          liveSocketReady = false;
-          pendingChunks = [];
-        }
-      }
-
-      if (msg.type === "result") {
-        for (const ex of msg.workout || []) {
-          for (const set of ex.sets || []) {
-            addRow(setsBody, {
-              id: null,
-              exercise_name: ex.exercise,
-              weight_value: set.weight,
-              weight_unit: set.unit,
-              reps: set.reps,
-            });
+        const msg = JSON.parse(event.data);
+        if (msg.type === "status") {
+          if (msg.value === "processing") setText(voiceStatus, "Processing...");
+          if (msg.value === "error") {
+            setText(voiceStatus, "AI error.");
+            if (liveSocket) liveSocket.close();
           }
         }
-
-        setText(voiceStatus, "Logged.");
-        liveSocket = null;
-        liveSocketReady = false;
-        pendingChunks = [];
+        if (msg.type === "result" && Array.isArray(msg.workout)) {
+          if (transcriptEl && msg.transcript) {
+            transcriptEl.textContent = `Transcript: ${msg.transcript}`;
+          }
+          for (const ex of msg.workout) {
+            const exercise = bestExerciseMatch(ex.exercise);
+            if (!exercise) continue;
+            for (const s of ex.sets || []) {
+              addRow(setsBody, {
+                id: null,
+                exercise_name: exercise,
+                weight_value: s.weight,
+                weight_unit: s.unit,
+                reps: s.reps,
+              });
+            }
+          }
+          setText(voiceStatus, "Logged.");
+          if (liveSocket) liveSocket.close();
+        }
+      } catch {
+        // ignore non-json frames
       }
     });
   },
@@ -183,10 +138,13 @@ setupRecorder({
     }
   },
   onStop: () => {
-    if (!liveSocket) return;
-    try {
-      liveSocket.send(JSON.stringify({ type: "stop" }));
-    } catch {}
+    if (liveSocket) {
+      try {
+        liveSocket.send(JSON.stringify({ type: "stop" }));
+      } catch {}
+    }
+    liveSocket = null;
+    liveSocketReady = false;
   },
 });
 
