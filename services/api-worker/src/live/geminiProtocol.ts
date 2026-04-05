@@ -13,14 +13,18 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 
 export function extractJson(text: string) {
   const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
+  if (start === -1) return null;
 
-  try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return null;
+  let end = text.lastIndexOf("}");
+  while (end > start) {
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch {
+      end = text.lastIndexOf("}", end - 1);
+    }
   }
+
+  return null;
 }
 
 export function parseGeminiEventData(data: unknown) {
@@ -32,53 +36,6 @@ export function parseGeminiEventData(data: unknown) {
     const text = new TextDecoder("utf-8").decode(new Uint8Array(data));
     if (!text.trim().startsWith("{")) return null;
     return JSON.parse(text);
-  }
-
-  return null;
-}
-
-export function getGeminiDebugPayload(msg: any) {
-  if (!msg || typeof msg !== "object") return null;
-
-  if (msg.setupComplete || msg.setup_complete) {
-    return { setupComplete: true };
-  }
-
-  const serverContent = msg.serverContent || msg.server_content;
-  if (!serverContent) return null;
-
-  const inputText =
-    serverContent.inputTranscription?.text ||
-    serverContent.input_transcription?.text;
-  if (inputText) {
-    return { serverContent: { inputTranscription: { text: inputText } } };
-  }
-
-  const outputText =
-    serverContent.outputTranscription?.text ||
-    serverContent.output_transcription?.text;
-  if (outputText) {
-    return { serverContent: { outputTranscription: { text: outputText } } };
-  }
-
-  const parts =
-    serverContent.modelTurn?.parts || serverContent.model_turn?.parts || [];
-  const textParts = parts
-    .filter((part: any) => typeof part?.text === "string" && part.text.trim())
-    .map((part: any) => ({ text: part.text }));
-  if (textParts.length > 0) {
-    return { serverContent: { modelTurn: { parts: textParts } } };
-  }
-
-  if (serverContent.turnComplete || serverContent.turn_complete) {
-    return {
-      serverContent: { turnComplete: true },
-      usageMetadata: msg.usageMetadata || msg.usage_metadata,
-    };
-  }
-
-  if (serverContent.generationComplete || serverContent.generation_complete) {
-    return { serverContent: { generationComplete: true } };
   }
 
   return null;

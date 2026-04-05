@@ -6,7 +6,6 @@ import {
   createAudioMessage,
   createSetupMessage,
   extractJson,
-  getGeminiDebugPayload,
   parseGeminiEventData,
 } from "./geminiProtocol";
 import { logWorkout } from "./persistWorkout";
@@ -127,21 +126,9 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
 
     if (!msg) return;
 
-    const debugPayload = getGeminiDebugPayload(msg);
-    if (debugPayload) {
-      const rawType = typeof event.data;
-      const ctor = (event.data as any)?.constructor?.name;
-      console.log("[DEBUG][LIVE] gemini msg type:", rawType, ctor || "");
-      try {
-        console.log(
-          "[DEBUG][LIVE] gemini msg:",
-          JSON.stringify(debugPayload).slice(0, 500)
-        );
-      } catch {}
-    }
-
     if (msg.setupComplete || msg.setup_complete) {
       setupComplete = true;
+      console.log("[DEBUG][LIVE] Gemini setup complete");
       sendMessage(worker, { type: "status", value: "listening" });
       return;
     }
@@ -176,6 +163,7 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
     }
 
     if (serverContent.turnComplete || serverContent.turn_complete) {
+      console.log("[DEBUG][LIVE] Gemini turn complete");
       const textSource = outputTranscript || accumulatedText;
       const parsed = extractJson(textSource);
       const transcript = inputTranscript || "";
@@ -204,6 +192,9 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
           console.error("[live] log error", error);
           sendMessage(worker, { type: "status", value: "error" });
         }
+      } else {
+        console.error("[live] could not parse Gemini workout JSON", textSource);
+        sendMessage(worker, { type: "status", value: "error" });
       }
     }
   });
