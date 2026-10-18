@@ -1,17 +1,19 @@
 {
   "name": "api-worker",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Cloudflare Worker & Gemini Live proxy for Kilo",
+  "main": "src/index.ts",
+  "type": "module",
   "scripts": {
-    "test": "node --test"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260305.1",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.7",
     "wrangler": "^4.71.0"
   }
 }

@@ -3,7 +3,7 @@ import type {
   WorkoutSet,
   WorkoutGroup,
 } from "../../../packages/shared/types/workoutModel";
-import { validateBatchPayload } from "./validation.js";
+import { validateBatchPayload } from "./validation";
 import type { Env } from "./env";
 import { handleLiveWs } from "./live/liveProxy";
 
