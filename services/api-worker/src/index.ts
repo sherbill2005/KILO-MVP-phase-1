@@ -32,7 +32,7 @@ export default {
         headers: {
           "access-control-allow-origin": "*",
           "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-          "access-control-allow-headers": "content-type, x-exercise-context",
+          "access-control-allow-headers": "content-type",
         },
       });
     }
@@ -178,3 +178,4 @@ export default {
     return text("Not Found", 404);
   },
 };
+

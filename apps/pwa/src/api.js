@@ -15,9 +15,6 @@ export async function postJson(path, body) {
 
   return res.json();
 }
-export async function postSetsBatch(sessionId, exercise, sets) {
-  return postJson(`/session/${sessionId}/sets`, {exercise_name: exercise, sets });
-}
 
 export async function patchJson(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -34,21 +31,4 @@ export async function patchJson(path, body) {
   return res.json();
 }
 
-export async function postAudioParse(audioBlob, contextList = []) {
-  const contextHeader = contextList.join(",");
-  const res = await fetch(`${API_BASE}/ai/parse`, {
-    method: "POST",
-    headers: {
-      "content-type": audioBlob.type || "audio/webm",
-      "x-exercise-context": contextHeader,
-    },
-    body: audioBlob,
-  });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "Request failed");
-  }
-
-  return res.json();
-}

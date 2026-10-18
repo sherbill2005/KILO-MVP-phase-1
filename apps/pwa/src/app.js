@@ -36,6 +36,8 @@ setForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!sessionId) {
     alert("Start a workout first");
+    console.log("zonesha")
+
     return;
   }
 
