@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="mobile_tab" name="shell-type"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            obsidian: "#08090C",
+            "card-surface": "#0E1015",
+            "card-border": "#1A1D24",
+            "accent-volt": "#CDF200",
+            "accent-titanium": "#E3E2E5",
+            "accent-slate": "#7A808C",
+            "accent-champagne": "#D4C7B5"
+          },
+          fontFamily: {
+            sans: ["Plus Jakarta Sans", "sans-serif"],
+            display: ["Space Grotesk", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+        background-color: #08090C;
+        color: #E3E2E5;
+        overscroll-behavior: none;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-obsidian text-accent-titanium font-sans flex flex-col min-h-screen antialiased selection:bg-accent-volt/20">
+<!-- Minimalist Executive Header -->
+<header class="fixed top-0 inset-x-0 z-50 bg-[#08090C]/85 backdrop-blur-2xl border-b border-white/[0.04] pt-safe">
+<div class="h-14 px-5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<img alt="KILO Logo Mark" class="h-6 w-auto object-contain opacity-95" src="https://lh3.googleusercontent.com/aida/AEtjO1VzFCHysFub-6oGPOtUGuThUp-sRqrAPit6SYkF0hdC_7eY2aQ_O_GbWOJJChLM3tqLrqry9bMwS17QhdWQQP_SHRHK2bXZkyAo5N09T4t7dqEzfAKrV1qHKiMKC5OMKVI8dpfZ4VxnEl0eL8ESfwv1PX-xfa00iGChbyOLBCZRWxx0uK8GiipkPjW-396CXKHAK6v69Slspx7cp2savFne6uSNei4smc0DL1zeWkso-6870UFmlSDiX2k"/>
+<div class="flex items-baseline tracking-[0.2em]">
+<span class="font-display text-sm tracking-[0.25em] font-semibold text-white">KILO</span>
+<span class="w-1 h-1 rounded-full bg-accent-volt ml-1 opacity-90"></span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+<span class="font-mono text-[10px] uppercase tracking-widest text-accent-slate font-medium">Offline Core</span>
+</div>
+<div class="w-7 h-7 rounded-full p-[1px] bg-gradient-to-tr from-white/20 via-white/5 to-transparent">
+<img alt="Profile" class="w-full h-full rounded-full object-cover grayscale opacity-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTYGiktzEcET3Jy7i4iGA_6TMyxpQQzOpoD35lM5xOgDBX5Hll38jXsiCZCd2_vqbKm-ySHfB7JGcAOEFoaHrA6qwr4s0jmJ5nwlNk1935fc7lnjfJXGrloFyBidOVNGgQSzfXv38pIu3uFrQxRuAevALmPZDtJsZAjM4rTiV_i-MJjerNYGE4XlDfSNGCVgN5Em613_Hu0CY4Q8rlO_meCJ5zFej6kOg4SCjOH6ApmL8EWaLe1qPQuA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex flex-col relative w-full pt-16 pb-28">
+<div class="flex flex-col w-full px-5 pt-3 gap-5">
+<!-- Executive Status Eyebrow -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1 h-3 bg-accent-volt/80 rounded-full"></span>
+<span class="font-mono text-[11px] tracking-[0.16em] uppercase text-zinc-400 font-medium">Telemetry / 1RM Estimator</span>
+</div>
+<span class="font-mono text-[10px] tracking-wider text-zinc-500 uppercase">Neural Model v2.4</span>
+</div>
+<!-- Luxury Segmented Control -->
+<div class="grid grid-cols-3 p-1 rounded-lg bg-[#0E1015] border border-white/[0.06]">
+<button class="py-2 rounded-md font-mono text-[11px] tracking-wider uppercase transition-all duration-200 bg-white/[0.07] text-white font-medium border border-white/[0.08] shadow-sm" id="tab-1rm">
+          1RM Strength
+        </button>
+<button class="py-2 rounded-md font-mono text-[11px] tracking-wider uppercase transition-all duration-200 text-zinc-500 hover:text-zinc-300" id="tab-volume">
+          Volume Trends
+        </button>
+<button class="py-2 rounded-md font-mono text-[11px] tracking-wider uppercase transition-all duration-200 text-zinc-500 hover:text-zinc-300" id="tab-muscle">
+          Distribution
+        </button>
+</div>
+<!-- 1RM Curve Hero Card -->
+<div class="flex flex-col bg-[#0D0F14] border border-white/[0.06] rounded-xl p-5 relative overflow-hidden backdrop-blur-xl">
+<!-- Discreet ambient radial glow -->
+<div class="absolute -top-16 -right-16 w-48 h-48 bg-accent-volt/5 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Exercise Selector & Micro Badge -->
+<div class="flex items-center justify-between relative z-10">
+<div class="relative inline-block">
+<button class="flex items-center gap-2 text-zinc-200 hover:text-white transition-colors group" id="lift-selector-btn">
+<span class="font-display text-base font-semibold tracking-tight" id="selected-lift-label">Bench Press</span>
+<span class="material-symbols-outlined text-zinc-400 group-hover:text-zinc-200 text-[18px] transition-transform">expand_more</span>
+</button>
+<!-- Dropdown -->
+<div class="hidden absolute left-0 top-full mt-2 w-48 bg-[#11141B] border border-white/10 rounded-lg shadow-2xl z-40 p-1 flex-col" id="lift-dropdown">
+<button class="w-full text-left px-3 py-2 rounded font-sans text-xs text-white bg-white/5 flex justify-between items-center" data-lift="Bench Press">
+<span>Bench Press</span>
+<span class="w-1.5 h-1.5 rounded-full bg-accent-volt"></span>
+</button>
+<button class="w-full text-left px-3 py-2 rounded font-sans text-xs text-zinc-400 hover:text-white hover:bg-white/[0.03] transition-colors" data-lift="Squat (Low Bar)">Squat (Low Bar)</button>
+<button class="w-full text-left px-3 py-2 rounded font-sans text-xs text-zinc-400 hover:text-white hover:bg-white/[0.03] transition-colors" data-lift="Deadlift (Sumo)">Deadlift (Sumo)</button>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-volt/[0.08] border border-accent-volt/20">
+<span class="w-1 h-1 rounded-full bg-accent-volt"></span>
+<span class="font-mono text-[9px] uppercase tracking-[0.14em] text-accent-volt font-semibold">All-Time PR</span>
+</div>
+</div>
+<!-- Hero Metric Readout -->
+<div class="flex flex-col mt-4 pt-1 z-10">
+<div class="flex items-baseline gap-2">
+<span class="font-display text-[46px] leading-[48px] font-medium tracking-tight text-white" id="primary-metric-val">115.0</span>
+<span class="font-mono text-sm tracking-wide text-zinc-400">kg</span>
+<span class="font-mono text-[11px] text-accent-volt/90 tracking-tight ml-2 font-medium px-2 py-0.5 rounded bg-accent-volt/[0.07] border border-accent-volt/15">+12.5 kg past 8 wks</span>
+</div>
+<span class="font-mono text-[11px] text-zinc-400 mt-1.5 tracking-tight">Validated at 107.5 kg × 3 reps · RPE 9.0</span>
+</div>
+<!-- Refined Telemetry Graph -->
+<div class="relative w-full pt-4 mt-1">
+<svg class="w-full h-36 overflow-visible" fill="none" viewbox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="curveGradient" x1="0" x2="320" y1="0" y2="0">
+<stop offset="0%" stop-color="#7A808C" stop-opacity="0.4"></stop>
+<stop offset="65%" stop-color="#E3E2E5" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#CDF200"></stop>
+</lineargradient>
+<lineargradient gradientunits="userSpaceOnUse" id="underGlow" x1="0" x2="0" y1="0" y2="120">
+<stop offset="0%" stop-color="#CDF200" stop-opacity="0.12"></stop>
+<stop offset="100%" stop-color="#08090C" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Ultra-subtle grid guides -->
+<line stroke="#1A1D24" stroke-dasharray="2 4" stroke-width="0.75" x1="0" x2="320" y1="20" y2="20"></line>
+<line stroke="#1A1D24" stroke-dasharray="2 4" stroke-width="0.75" x1="0" x2="320" y1="65" y2="65"></line>
+<line stroke="#1A1D24" stroke-dasharray="2 4" stroke-width="0.75" x1="0" x2="320" y1="110" y2="110"></line>
+<!-- Area fill -->
+<path d="M 12 104 C 60 98, 100 88, 140 76 C 180 64, 220 46, 270 30 C 290 24, 305 18, 310 14 L 310 120 L 12 120 Z" fill="url(#underGlow)"></path>
+<!-- Precision Bezier Curve -->
+<path d="M 12 104 C 60 98, 100 88, 140 76 C 180 64, 220 46, 270 30 C 290 24, 305 18, 310 14" fill="none" stroke="url(#curveGradient)" stroke-linecap="round" stroke-width="2"></path>
+<!-- Delicate historical node pins -->
+<circle cx="12" cy="104" fill="#525866" r="2"></circle>
+<circle cx="68" cy="95" fill="#525866" r="2"></circle>
+<circle cx="140" cy="76" fill="#7A808C" r="2"></circle>
+<circle cx="210" cy="50" fill="#A8ADB8" r="2.2"></circle>
+<circle cx="270" cy="30" fill="#E3E2E5" r="2.5"></circle>
+<!-- Current PR Pin with delicate halo -->
+<circle cx="310" cy="14" fill="#CDF200" fill-opacity="0.18" r="7"></circle>
+<circle cx="310" cy="14" fill="#CDF200" r="3.5" stroke="#08090C" stroke-width="1.5"></circle>
+</svg>
+<!-- Timeline labels -->
+<div class="flex justify-between items-center pt-2 font-mono text-[10px] text-zinc-400">
+<span>W1 · 95.0</span>
+<span>W3</span>
+<span>W5 · 102.5</span>
+<span>W7</span>
+<span class="text-accent-volt font-medium">W8 · 115.0</span>
+</div>
+</div>
+</div>
+<!-- Formula Models Section -->
+<div class="flex flex-col gap-2.5">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-mono text-[10px] tracking-[0.16em] uppercase text-zinc-400 font-medium">Formula Models</span>
+<span class="font-mono text-[10px] text-zinc-400">Base: 100 kg × 5 reps</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<!-- Brzycki -->
+<div class="flex flex-col p-3 rounded-lg bg-[#0D0F14] border border-white/[0.05] hover:border-white/10 transition-colors">
+<div class="flex items-center justify-between text-zinc-400">
+<span class="font-mono text-[10px] uppercase tracking-wider">Brzycki</span>
+<span class="w-1 h-1 rounded-full bg-zinc-600"></span>
+</div>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="font-display text-lg font-medium text-white tracking-tight">114.8</span>
+<span class="font-mono text-[10px] text-zinc-400">kg</span>
+</div>
+<span class="font-mono text-[9px] text-zinc-400 mt-1 tracking-tight">Linear curve</span>
+</div>
+<!-- Epley (Benchmark Focus) -->
+<div class="flex flex-col p-3 rounded-lg bg-[#10131B] border border-accent-volt/25 relative">
+<div class="flex items-center justify-between text-accent-volt">
+<span class="font-mono text-[10px] uppercase tracking-wider font-semibold">Epley (Std)</span>
+<span class="w-1 h-1 rounded-full bg-accent-volt"></span>
+</div>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="font-display text-lg font-semibold text-white tracking-tight">116.6</span>
+<span class="font-mono text-[10px] text-accent-volt">kg</span>
+</div>
+<span class="font-mono text-[9px] text-zinc-400 mt-1 tracking-tight">Powerlifting std</span>
+</div>
+<!-- Lombard -->
+<div class="flex flex-col p-3 rounded-lg bg-[#0D0F14] border border-white/[0.05] hover:border-white/10 transition-colors">
+<div class="flex items-center justify-between text-zinc-400">
+<span class="font-mono text-[10px] uppercase tracking-wider">Lombard</span>
+<span class="w-1 h-1 rounded-full bg-zinc-600"></span>
+</div>
+<div class="flex items-baseline gap-1 mt-2">
+<span class="font-display text-lg font-medium text-white tracking-tight">115.2</span>
+<span class="font-mono text-[10px] text-zinc-400">kg</span>
+</div>
+<span class="font-mono text-[9px] text-zinc-400 mt-1 tracking-tight">Convex model</span>
+</div>
+</div>
+</div>
+<!-- Weekly Volume Load -->
+<div class="flex flex-col bg-[#0D0F14] border border-white/[0.06] rounded-xl p-4 gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-display text-sm font-semibold text-white">Weekly Volume Load</span>
+</div>
+<span class="font-mono text-[11px] text-accent-titanium font-medium tracking-tight px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.05]">28,000 kg Total</span>
+</div>
+<!-- Muted Luxury Segmented Distribution Bar -->
+<div class="flex flex-col gap-1.5">
+<div class="flex h-1.5 w-full rounded-full bg-white/[0.04] overflow-hidden gap-[2px]">
+<div class="h-full bg-accent-volt rounded-l-full" style="width: 35%;"></div>
+<div class="h-full bg-[#E3E2E5]" style="width: 25%;"></div>
+<div class="h-full bg-[#7A808C]" style="width: 25%;"></div>
+<div class="h-full bg-[#3E434D] rounded-r-full" style="width: 15%;"></div>
+</div>
+<div class="flex justify-between items-center text-zinc-400 font-mono text-[9px]">
+<span>0 kg</span>
+<span>Threshold: 32,500 kg (86%)</span>
+</div>
+</div>
+<!-- Clean Metric Rows -->
+<div class="grid grid-cols-2 gap-2 pt-0.5">
+<!-- Chest -->
+<div class="flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-volt"></span>
+<span class="font-sans text-xs text-white font-medium">Chest</span>
+</div>
+<span class="font-mono text-[10px] text-accent-volt font-medium">35%</span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-mono text-xs text-zinc-300">9,800 kg</span>
+<span class="font-mono text-[9px] text-zinc-400">Optimal</span>
+</div>
+</div>
+<!-- Back -->
+<div class="flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#E3E2E5]"></span>
+<span class="font-sans text-xs text-white font-medium">Back</span>
+</div>
+<span class="font-mono text-[10px] text-zinc-400">25%</span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-mono text-xs text-zinc-300">7,000 kg</span>
+<span class="font-mono text-[9px] text-zinc-400">Recovery</span>
+</div>
+</div>
+<!-- Legs -->
+<div class="flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#7A808C]"></span>
+<span class="font-sans text-xs text-white font-medium">Legs</span>
+</div>
+<span class="font-mono text-[10px] text-zinc-400">25%</span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-mono text-xs text-zinc-300">7,000 kg</span>
+<span class="font-mono text-[9px] text-amber-400/80">High Load</span>
+</div>
+</div>
+<!-- Shoulders/Arms -->
+<div class="flex flex-col p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#3E434D]"></span>
+<span class="font-sans text-xs text-white font-medium">Shoulders/Arms</span>
+</div>
+<span class="font-mono text-[10px] text-zinc-400">15%</span>
+</div>
+<div class="flex items-baseline justify-between">
+<span class="font-mono text-xs text-zinc-300">4,200 kg</span>
+<span class="font-mono text-[9px] text-zinc-400">Deload</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Neuromuscular Adaptation Insight -->
+<div class="flex items-center p-3 rounded-xl bg-[#0D0F14] border border-white/[0.06] gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-white/10 bg-black">
+<img alt="Athlete context" class="w-full h-full object-cover grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuTC_fMreP544pal7K8XuLZ4APyzvUII5zw1reP_hQDPobjoGoWvpD1Ijho3yUvCaiUQFg3A2of82YCGdUPvEBCxuLgYYI__YVCwWl7g-Dxu3pJjZQRQIT2iUP4HgNgAwVVJyIZtG1bM2ZZIqiLFLHsZhbEXAA4dsVVFtu4kNPo1Yyw-1fY7n3SflYXHam8orvUpevb4VJtliYtUKIWN6xf_aYpTbUZxU8smRObU4lfyGndyds06POvw"/>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-mono text-[10px] uppercase tracking-wider text-accent-volt font-medium">Neuromuscular Adaptation</span>
+<p class="font-sans text-xs text-zinc-400 truncate mt-0.5">Trajectory exceeds baseline hyper-trophic rate by +4.2%.</p>
+</div>
+<span class="material-symbols-outlined text-zinc-400 text-lg">chevron_right</span>
+</div>
+<!-- Understated Export Action -->
+<div class="flex flex-col gap-2 pt-1 pb-4">
+<button class="w-full h-11 bg-white/[0.05] hover:bg-white/[0.08] active:bg-white/[0.1] text-accent-titanium border border-white/10 rounded-lg flex items-center justify-center gap-2 transition-colors duration-150" id="export-btn">
+<span class="material-symbols-outlined text-base text-zinc-400">download</span>
+<span class="font-mono text-[11px] uppercase tracking-[0.14em] font-medium">Export Telemetry CSV</span>
+</button>
+<div class="flex items-center justify-center gap-1.5">
+<span class="w-1 h-1 rounded-full bg-emerald-400"></span>
+<span class="font-mono text-[9px] uppercase tracking-wider text-zinc-400">Local Encrypted Store · 0ms Latency</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Luxury Obsidian Bottom Navigation Dock -->
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-[#08090C]/90 backdrop-blur-2xl border-t border-white/[0.05]">
+<div class="flex justify-around items-center h-16 px-4">
+<a class="flex flex-col items-center justify-center gap-1 min-w-[60px] text-zinc-500 hover:text-zinc-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="font-mono text-[9px] uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 min-w-[60px] text-zinc-500 hover:text-zinc-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">fitness_center</span>
+<span class="font-mono text-[9px] uppercase tracking-wider">Workout</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 min-w-[60px] text-zinc-500 hover:text-zinc-300 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">graphic_eq</span>
+<span class="font-mono text-[9px] uppercase tracking-wider">Voice</span>
+</a>
+<a aria-current="page" class="flex flex-col items-center justify-center gap-1 min-w-[60px] text-white" href="#">
+<span class="material-symbols-outlined text-[20px] text-accent-volt">insights</span>
+<span class="font-mono text-[9px] uppercase tracking-wider text-accent-volt font-medium">Progress</span>
+</a>
+</div>
+</nav>
+<!-- Micro Scripts -->
+<script>
+    const liftBtn = document.getElementById('lift-selector-btn');
+    const liftDropdown = document.getElementById('lift-dropdown');
+    const liftLabel = document.getElementById('selected-lift-label');
+    const metricVal = document.getElementById('primary-metric-val');
+
+    if (liftBtn && liftDropdown) {
+      liftBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        liftDropdown.classList.toggle('hidden');
+        liftDropdown.classList.toggle('flex');
+      });
+
+      liftDropdown.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const lift = btn.getAttribute('data-lift');
+          if (lift) {
+            liftLabel.textContent = lift.split(' ')[0];
+            if (lift.includes('Squat')) {
+              metricVal.textContent = '162.5';
+            } else if (lift.includes('Deadlift')) {
+              metricVal.textContent = '210.0';
+            } else {
+              metricVal.textContent = '115.0';
+            }
+          }
+          liftDropdown.classList.add('hidden');
+          liftDropdown.classList.remove('flex');
+        });
+      });
+
+      document.addEventListener('click', () => {
+        liftDropdown.classList.add('hidden');
+        liftDropdown.classList.remove('flex');
+      });
+    }
+
+    // Segmented tab toggle
+    const tabs = ['tab-1rm', 'tab-volume', 'tab-muscle'];
+    tabs.forEach(tabId => {
+      const el = document.getElementById(tabId);
+      if (!el) return;
+      el.addEventListener('click', () => {
+        tabs.forEach(t => {
+          const target = document.getElementById(t);
+          if (target) {
+            target.className = 'py-2 rounded-md font-mono text-[11px] tracking-wider uppercase transition-all duration-200 text-zinc-500 hover:text-zinc-300';
+          }
+        });
+        el.className = 'py-2 rounded-md font-mono text-[11px] tracking-wider uppercase transition-all duration-200 bg-white/[0.07] text-white font-medium border border-white/[0.08] shadow-sm';
+      });
+    });
+
+    // Export button minimal trigger
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const origHTML = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin text-accent-volt">sync</span><span class="font-mono text-[11px] uppercase tracking-[0.14em]">Extracting Telemetry...</span>';
+        setTimeout(() => {
+          exportBtn.innerHTML = '<span class="material-symbols-outlined text-base text-accent-volt">check</span><span class="font-mono text-[11px] uppercase tracking-[0.14em]">CSV Dispatched</span>';
+          setTimeout(() => {
+            exportBtn.innerHTML = origHTML;
+          }, 2000);
+        }, 600);
+      });
+    }
+  </script>
+</body></html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#08090C;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"background":"#08090C","surface":"#0D0F14","surface-card":"#111318","surface-elevated":"#161920","surface-border":"rgba(255,255,255,0.07)","surface-border-subtle":"rgba(255,255,255,0.04)","primary-accent":"#cdf200","primary-accent-dim":"#a2be0a","text-primary":"#F4F4F6","text-secondary":"#94A3B8","text-muted":"#64748B","text-subtle":"#475569"},"fontFamily":{"headline":["Space Grotesk","sans-serif"],"body":["Geist","sans-serif"],"mono":["JetBrains Mono","monospace"]}}}};</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-[#08090C] text-text-primary flex flex-col min-h-screen font-body selection:bg-primary-accent/20 selection:text-primary-accent antialiased"><header class="fixed top-0 inset-x-0 z-50 bg-[#08090C]/80 backdrop-blur-xl border-b border-surface-border pt-safe"><div class="h-16 px-5 flex items-center justify-between"><div class="flex items-center gap-3"><span class="font-headline text-[19px] tracking-[0.22em] uppercase text-text-primary font-semibold">KILO</span><span class="h-3 w-[1px] bg-white/20"></span><span class="font-mono text-[10px] tracking-[0.16em] uppercase text-text-muted">ATHLETIC OS</span></div><div class="flex items-center gap-4"><div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/[0.03] border border-surface-border"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400/90 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span><span class="font-mono text-[10px] text-text-secondary tracking-wider uppercase font-medium">Offline Ready</span></div><div class="relative flex items-center justify-center p-[1px] rounded-full border border-white/20"><img alt="Profile" class="w-7 h-7 rounded-full object-cover grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTYGiktzEcET3Jy7i4iGA_6TMyxpQQzOpoD35lM5xOgDBX5Hll38jXsiCZCd2_vqbKm-ySHfB7JGcAOEFoaHrA6qwr4s0jmJ5nwlNk1935fc7lnjfJXGrloFyBidOVNGgQSzfXv38pIu3uFrQxRuAevALmPZDtJsZAjM4rTiV_i-MJjerNYGE4XlDfSNGCVgN5Em613_Hu0CY4Q8rlO_meCJ5zFej6kOg4SCjOH6ApmL8EWaLe1qPQuA"/></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-28 bg-[#08090C]"><div class="flex flex-col w-full px-5 pb-8 gap-7">
+<!-- Athlete Greeting & Tactical Micro Status Strip -->
+<section class="flex flex-col gap-4 pt-5">
+<div class="flex items-end justify-between">
+<div class="flex flex-col gap-1">
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-[0.2em] font-medium">Telemetry Protocol · Active</span>
+<h1 class="font-headline text-[27px] leading-tight text-text-primary tracking-tight font-light">
+          Welcome back, <span class="font-semibold text-white">Marcus</span>
+</h1>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.03] border border-surface-border">
+<span class="font-mono text-[11px] text-primary-accent tracking-wider font-medium">4D STREAK</span>
+</div>
+</div>
+<!-- Micro Schedule Strip -->
+<div class="flex items-center justify-between px-4 py-3 rounded-lg bg-surface-card border border-surface-border">
+<div class="flex items-center gap-3 min-w-0">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-accent"></span>
+<span class="font-mono text-[11px] text-text-muted uppercase tracking-wider">Today</span>
+<span class="text-[13px] text-text-primary font-medium tracking-tight truncate">Push Day A (Hypertrophy Focus)</span>
+</div>
+<div class="flex items-center gap-1 text-text-secondary shrink-0 pl-2">
+<span class="font-mono text-[11px] tracking-wide text-text-muted">18:00</span>
+<span class="material-symbols-outlined text-[15px] text-text-muted">arrow_forward</span>
+</div>
+</div>
+</section>
+<!-- Weekly Total Volume Hero Presentation -->
+<section class="flex flex-col p-6 rounded-xl bg-surface-card border border-surface-border relative overflow-hidden">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="font-mono text-[11px] text-text-secondary uppercase tracking-[0.18em]">Weekly Volume Load</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-surface-border text-text-primary">
+<span class="material-symbols-outlined text-[13px] text-primary-accent">trending_up</span>
+<span class="font-mono text-[10px] tracking-wider text-text-secondary">+14.2%</span>
+</div>
+</div>
+<!-- Hero Metric Display -->
+<div class="flex items-baseline gap-2.5 my-1">
+<span class="font-headline text-[46px] leading-none font-light tracking-[-0.03em] text-white tabular-nums">
+        32,450
+      </span>
+<span class="font-headline text-[15px] text-text-muted uppercase tracking-wider font-light">kg</span>
+</div>
+<!-- Secondary Telemetry Row -->
+<div class="grid grid-cols-2 gap-4 py-3.5 my-3 border-y border-surface-border-subtle">
+<div class="flex flex-col gap-0.5">
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Completed Sessions</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-headline text-[17px] text-white font-medium">14</span>
+<span class="font-mono text-[11px] text-text-muted">/ 16 Target</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Average Intensity</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-headline text-[17px] text-white font-medium">84%</span>
+<span class="font-mono text-[11px] text-text-muted">1RM Load</span>
+</div>
+</div>
+</div>
+<!-- Minimal 7-Day Sparkline Bar Visualizer -->
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex items-end justify-between h-20 pt-3 gap-2.5 px-0.5">
+<!-- Mon -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.12] transition-colors group-hover:bg-white/30 h-[52%]"></div>
+<span class="font-mono text-[10px] text-text-muted">M</span>
+</div>
+<!-- Tue -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.12] transition-colors group-hover:bg-white/30 h-[78%]"></div>
+<span class="font-mono text-[10px] text-text-muted">T</span>
+</div>
+<!-- Wed -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.08] transition-colors group-hover:bg-white/30 h-[34%]"></div>
+<span class="font-mono text-[10px] text-text-muted">W</span>
+</div>
+<!-- Thu -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.12] transition-colors group-hover:bg-white/30 h-[90%]"></div>
+<span class="font-mono text-[10px] text-text-muted">T</span>
+</div>
+<!-- Fri -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.12] transition-colors group-hover:bg-white/30 h-[62%]"></div>
+<span class="font-mono text-[10px] text-text-muted">F</span>
+</div>
+<!-- Sat (Peak / Active) -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group relative">
+<div class="w-full rounded-t-[1px] bg-primary-accent shadow-[0_0_14px_rgba(205,242,0,0.3)] h-[100%]"></div>
+<span class="font-mono text-[10px] text-primary-accent font-semibold">S</span>
+</div>
+<!-- Sun (Today / Projected) -->
+<div class="flex-1 flex flex-col items-center h-full justify-end gap-2 group">
+<div class="w-full rounded-t-[1px] bg-white/[0.05] border border-dashed border-white/20 h-[24%]"></div>
+<span class="font-mono text-[10px] text-text-muted">S</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Workout Modes Section: Refined Architectural Cards -->
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h2 class="font-mono text-[11px] text-text-secondary uppercase tracking-[0.2em]">
+        Execution Modes
+      </h2>
+<span class="font-mono text-[10px] text-text-muted tracking-wider uppercase">Dual Ingest</span>
+</div>
+<!-- Mode A: Live Workout -->
+<div class="flex flex-col p-5 rounded-xl bg-surface-card border border-surface-border hover:border-white/20 transition-all duration-300 group">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/[0.05] border border-surface-border flex items-center justify-center text-text-primary">
+<span class="material-symbols-outlined text-[18px]">radio_button_checked</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline text-[16px] text-white font-medium tracking-tight">Live Workout</h3>
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Real-Time Telemetry</span>
+</div>
+</div>
+<span class="font-mono text-[10px] text-primary-accent px-2 py-0.5 rounded-full bg-primary-accent/10 border border-primary-accent/20 uppercase tracking-widest font-medium">Ready</span>
+</div>
+<p class="text-[13px] leading-relaxed text-text-secondary mb-4 font-light">
+        Continuous earbud voice context, automated 60s rest countdowns, and immediate PR detection as you lift.
+      </p>
+<div class="flex items-center gap-3 pt-3 border-t border-surface-border-subtle mb-4">
+<div class="flex items-center gap-1.5 text-text-muted font-mono text-[11px]">
+<span class="material-symbols-outlined text-[14px]">headphones</span>
+<span>Earbud Hands-Free</span>
+</div>
+<span class="text-white/20">·</span>
+<div class="flex items-center gap-1.5 text-text-muted font-mono text-[11px]">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+<span>60s Auto Rest</span>
+</div>
+</div>
+<button class="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-white text-black font-headline text-[13px] font-semibold uppercase tracking-[0.14em] hover:bg-neutral-200 active:scale-[0.99] transition-all cursor-pointer" id="launchLiveBtn">
+<span>Launch Live Session</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<!-- Mode B: Batch Voice Ingestion -->
+<div class="flex flex-col p-5 rounded-xl bg-surface-card border border-surface-border hover:border-white/20 transition-all duration-300">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/[0.05] border border-surface-border flex items-center justify-center text-text-primary">
+<span class="material-symbols-outlined text-[18px]">graphic_eq</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline text-[16px] text-white font-medium tracking-tight">Batch Voice Ingestion</h3>
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Post-Session Audio</span>
+</div>
+</div>
+<span class="font-mono text-[10px] text-text-muted px-2 py-0.5 rounded-full bg-white/[0.03] border border-surface-border uppercase tracking-widest">Async</span>
+</div>
+<p class="text-[13px] leading-relaxed text-text-secondary mb-4 font-light">
+        Dictate your entire completed workout in a single stream at your locker. Offline parser extracts sets, load, and RPE.
+      </p>
+<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 border border-surface-border-subtle mb-4">
+<span class="material-symbols-outlined text-[15px] text-text-muted">mic</span>
+<span class="font-mono text-[11px] text-text-muted italic truncate">“Bench press 4x10 at 95kg then skullcrushers 3x12...”</span>
+</div>
+<button class="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-white/[0.04] border border-surface-border text-text-primary font-headline text-[13px] font-medium uppercase tracking-[0.14em] hover:bg-white/[0.08] hover:border-white/20 active:scale-[0.99] transition-all cursor-pointer" id="startBatchBtn">
+<span class="material-symbols-outlined text-[16px]">mic</span>
+<span>Record Batch Audio</span>
+</button>
+</div>
+</section>
+<!-- Training Context Ambient Visual -->
+<section class="relative w-full rounded-xl overflow-hidden bg-surface-card border border-surface-border">
+<div class="bg-cover bg-center w-full h-36 relative grayscale contrast-125 brightness-75" data-alt="High-contrast athletic gym telemetry photography of a barbell with heavy matte black plates lying on rubber flooring, drenched in Moody low-key gymnasium lighting with subtle electric neon yellow green accents and razor sharp shadows, tactile and cyber-athletic feel" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCv0zb-WU6H68xyI25EPtK6MSrHsc1NuLN-doP1nBgKQXGiG83hSXPJt7SKX20e5dlVQKhpA1ZVTi7Ug84gDJXxUn8jyW0zNIdHvzHmnLrMnWrpWxVH2NWW4m8BN-72oe8F-CKOFqcB0k90tt5DNuCybX831Z6icxmBWwET28SG-sIoYYnV4xsd69iybFN9ISWhs82r9P3M326K-9Q8OuMF0_v4L4S28h15rwAH9ZhkdE8DYrn-s_cK5A')">
+<div class="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/70 to-transparent"></div>
+<div class="absolute bottom-3.5 left-4 right-4 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-mono text-[9px] text-text-muted uppercase tracking-[0.2em]">Equipment Calibration</span>
+<span class="font-headline text-[13px] text-text-primary font-medium tracking-tight">Barbell &amp; Free Weights Calibrated</span>
+</div>
+<span class="font-mono text-[10px] text-text-secondary px-2.5 py-0.5 rounded-full bg-white/[0.06] backdrop-blur-md border border-white/10 uppercase tracking-wider">Synced</span>
+</div>
+</div>
+</section>
+<!-- Recent Activity: Editorial Minimalist List -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between mb-1">
+<h2 class="font-mono text-[11px] text-text-secondary uppercase tracking-[0.2em]">
+        Recent Activity
+      </h2>
+<a class="font-mono text-[10px] text-text-muted hover:text-text-primary transition-colors uppercase tracking-wider" href="#">
+        All Logs
+      </a>
+</div>
+<!-- Log Item 1 -->
+<div class="flex flex-col p-4 rounded-xl bg-surface-card border border-surface-border gap-3 hover:border-white/20 transition-colors">
+<div class="flex items-baseline justify-between">
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline text-[15px] text-white font-medium">Heavy Chest &amp; Triceps</h3>
+<span class="px-1.5 py-0.5 rounded bg-white/[0.06] border border-surface-border font-mono text-[9px] text-primary-accent uppercase font-medium">PR</span>
+</div>
+<span class="font-mono text-[11px] text-text-muted">52 min</span>
+</div>
+<div class="flex items-center justify-between text-text-secondary text-[12px] pt-1">
+<div class="flex items-center gap-3">
+<span class="font-mono text-[11px] text-text-muted">18 sets</span>
+<span class="text-white/20">·</span>
+<span class="font-mono text-[11px] text-text-primary">7,850 kg</span>
+</div>
+<span class="font-mono text-[11px] text-text-muted">96% Target RPE</span>
+</div>
+<div class="flex items-center gap-2 pt-2 border-t border-surface-border-subtle">
+<span class="font-mono text-[10px] text-primary-accent tracking-wide">Bench Press 105kg PR</span>
+<span class="text-white/20">·</span>
+<span class="font-mono text-[10px] text-text-muted truncate">Incline DB 36kg +3 more</span>
+</div>
+</div>
+<!-- Log Item 2 -->
+<div class="flex flex-col p-4 rounded-xl bg-surface-card border border-surface-border gap-3 hover:border-white/20 transition-colors">
+<div class="flex items-baseline justify-between">
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline text-[15px] text-white font-medium">Leg Hypertrophy</h3>
+</div>
+<span class="font-mono text-[11px] text-text-muted">64 min</span>
+</div>
+<div class="flex items-center justify-between text-text-secondary text-[12px] pt-1">
+<div class="flex items-center gap-3">
+<span class="font-mono text-[11px] text-text-muted">20 sets</span>
+<span class="text-white/20">·</span>
+<span class="font-mono text-[11px] text-text-primary">12,400 kg</span>
+</div>
+<span class="font-mono text-[11px] text-primary-accent">+620 kg PR</span>
+</div>
+<div class="flex items-center gap-2 pt-2 border-t border-surface-border-subtle">
+<span class="font-mono text-[10px] text-text-secondary">Barbell Squat 140kg</span>
+<span class="text-white/20">·</span>
+<span class="font-mono text-[10px] text-text-muted truncate">Romanian DL 110kg +4 more</span>
+</div>
+</div>
+</section>
+<!-- Technical Guarantee Strip -->
+<div class="flex items-center justify-between py-2.5 px-4 rounded-lg bg-surface-card/60 border border-surface-border-subtle">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-white/40"></span>
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">&lt;100ms latency</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400/80"></span>
+<span class="font-mono text-[10px] text-text-muted uppercase tracking-wider">Zero Cloud Dependency</span>
+</div>
+</div>
+</div>
+<script>
+  document.getElementById('launchLiveBtn')?.addEventListener('click', function() {
+    this.classList.add('opacity-80', 'scale-[0.98]');
+    setTimeout(() => {
+      this.classList.remove('opacity-80', 'scale-[0.98]');
+    }, 150);
+  });
+
+  document.getElementById('startBatchBtn')?.addEventListener('click', function() {
+    this.classList.add('opacity-80', 'scale-[0.98]');
+    setTimeout(() => {
+      this.classList.remove('opacity-80', 'scale-[0.98]');
+    }, 150);
+  });
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-[#08090C]/90 backdrop-blur-xl border-t border-surface-border"><div class="flex justify-around items-center h-16 px-4"><a aria-current="page" class="flex flex-col items-center justify-center gap-1 min-w-[56px] h-11 text-white transition-colors group" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[20px] font-light">grid_view</span><span class="font-mono text-[9px] uppercase tracking-[0.14em]">Home</span></a><a class="flex flex-col items-center justify-center gap-1 min-w-[56px] h-11 text-text-muted hover:text-text-secondary transition-colors group" data-path="active-workout" href="#"><span class="material-symbols-outlined text-[20px] font-light">fitness_center</span><span class="font-mono text-[9px] uppercase tracking-[0.14em]">Workout</span></a><a class="flex flex-col items-center justify-center gap-1 min-w-[56px] h-11 text-text-muted hover:text-text-secondary transition-colors group" data-path="voice-batch" href="#"><span class="material-symbols-outlined text-[20px] font-light">graphic_eq</span><span class="font-mono text-[9px] uppercase tracking-[0.14em]">Voice</span></a><a class="flex flex-col items-center justify-center gap-1 min-w-[56px] h-11 text-text-muted hover:text-text-secondary transition-colors group" data-path="progress" href="#"><span class="material-symbols-outlined text-[20px] font-light">show_chart</span><span class="font-mono text-[9px] uppercase tracking-[0.14em]">Metrics</span></a></div></nav></body></html>

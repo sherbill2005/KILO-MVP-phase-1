@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="mobile_tab" name="shell-type"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@300;400;500;600&amp;family=Geist:wght@300;400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..400,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    @layer base {
+      html, body {
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+        background-color: #0b0c0e;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+      main > :first-child {
+        margin-top: 0 !important;
+      }
+      main > :last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    .thin-line-bar {
+      transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+    }
+  </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-tint": "#b4d400",
+            "outline": "#2c2d30",
+            "on-surface-variant": "#8e9196",
+            "primary-fixed": "#cdf200",
+            "background": "#0b0c0e",
+            "surface-dim": "#0b0c0e",
+            "on-surface": "#ededed",
+            "surface-container-high": "#1c1e22",
+            "primary": "#ffffff",
+            "surface": "#111215",
+            "surface-container": "#15171b",
+            "surface-container-low": "#111215",
+            "surface-container-lowest": "#08090a",
+            "surface-container-highest": "#23262c",
+            "accent-volt": "#cdf200",
+            "accent-subtle": "#e8e5d8",
+            "border-subtle": "#1c1e22"
+          },
+          fontFamily: {
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "body-lg": ["Geist", "sans-serif"],
+            "body-md": ["Geist", "sans-serif"],
+            "body-sm": ["Geist", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-dim text-on-surface flex flex-col min-h-screen antialiased selection:bg-accent-volt/20">
+<!-- Top System Header -->
+<header class="fixed top-0 inset-x-0 z-50 bg-[#0b0c0e]/85 backdrop-blur-md pt-safe border-b border-border-subtle/40">
+<div class="h-14 px-5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<img alt="KILO Logo Mark" class="h-6 w-auto object-contain opacity-90" src="https://lh3.googleusercontent.com/aida/AEtjO1VzFCHysFub-6oGPOtUGuThUp-sRqrAPit6SYkF0hdC_7eY2aQ_O_GbWOJJChLM3tqLrqry9bMwS17QhdWQQP_SHRHK2bXZkyAo5N09T4t7dqEzfAKrV1qHKiMKC5OMKVI8dpfZ4VxnEl0eL8ESfwv1PX-xfa00iGChbyOLBCZRWxx0uK8GiipkPjW-396CXKHAK6v69Slspx7cp2savFne6uSNei4smc0DL1zeWkso-6870UFmlSDiX2k"/>
+<div class="flex items-baseline tracking-tight">
+<span class="font-headline-sm text-sm tracking-wider uppercase text-primary font-semibold">KILO</span>
+<span class="w-1 h-1 rounded-full bg-accent-volt ml-1 opacity-80"></span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border-subtle bg-surface-container/60">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+<span class="font-mono text-[10px] text-neutral-400 tracking-wider uppercase">Offline Engine</span>
+</div>
+<div class="relative flex items-center justify-center p-[1px] rounded-full border border-neutral-700/60">
+<img alt="Profile" class="w-6 h-6 rounded-full object-cover grayscale opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTYGiktzEcET3Jy7i4iGA_6TMyxpQQzOpoD35lM5xOgDBX5Hll38jXsiCZCd2_vqbKm-ySHfB7JGcAOEFoaHrA6qwr4s0jmJ5nwlNk1935fc7lnjfJXGrloFyBidOVNGgQSzfXv38pIu3uFrQxRuAevALmPZDtJsZAjM4rTiV_i-MJjerNYGE4XlDfSNGCVgN5Em613_Hu0CY4Q8rlO_meCJ5zFej6kOg4SCjOH6ApmL8EWaLe1qPQuA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Space -->
+<main class="flex flex-col relative w-full pt-16 pb-24 bg-[#0b0c0e]">
+<div class="flex flex-col w-full px-5 space-y-4 pb-6">
+<!-- Minimalist Header Action Bar -->
+<div class="flex items-center justify-between pt-3 pb-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-volt animate-pulse"></span>
+<h1 class="font-headline-sm text-[16px] text-primary tracking-tight font-medium">Batch Voice Ingestion</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="font-mono text-[11px] uppercase tracking-wider text-neutral-400 hover:text-neutral-200 transition-colors px-2 py-1" type="button">
+            Discard
+          </button>
+<button class="px-3.5 py-1 rounded-full bg-neutral-100 hover:bg-white text-[#0b0c0e] font-mono text-[11px] font-semibold tracking-wide transition-all shadow-[0_0_12px_rgba(255,255,255,0.1)] active:scale-95" type="button">
+            Save
+          </button>
+</div>
+</div>
+<!-- Instruction / Prompt Precision Micro-Card -->
+<div class="rounded-xl border border-border-subtle bg-surface-container/40 px-4 py-3 relative overflow-hidden backdrop-blur-sm">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-[17px] text-neutral-400 mt-0.5 flex-shrink-0">mic</span>
+<div class="space-y-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="font-mono text-[10px] text-neutral-400 uppercase tracking-widest">Natural Flow</span>
+<span class="text-neutral-600 text-[10px]">•</span>
+<span class="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">Local Neural Model</span>
+</div>
+<p class="font-body-sm text-[12px] text-neutral-400 leading-relaxed font-light">
+              Speak full workout continuously. E.g. <span class="text-neutral-200 font-normal">“Bench press 3 sets of 10 at 80 kg, Barbell Rows 4 sets of 8 at 70 kg, finish Overhead Press 3×8 at 50 kg”</span>
+</p>
+</div>
+</div>
+</div>
+<!-- Precision Audio Waveform Visualizer (Swiss / B&O Acoustic Instrument) -->
+<div class="rounded-xl border border-border-subtle bg-gradient-to-b from-[#131519] to-[#0e1012] p-4 flex flex-col justify-between min-h-[170px] relative overflow-hidden">
+<!-- Status & Precision Telemetry -->
+<div class="w-full flex items-center justify-between text-xs z-10">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-volt opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-accent-volt"></span>
+</span>
+<span class="font-mono text-[11px] text-neutral-200 tracking-wider" id="recording-timer">REC 00:28</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">Gain</span>
+<span class="font-mono text-[11px] text-neutral-300 font-medium" id="decibel-counter">-18.4 dB</span>
+</div>
+</div>
+<!-- High-Fidelity Thin Waveform Lines -->
+<div class="w-full flex items-center justify-center gap-[3px] py-4 z-10" id="waveform-container">
+<div class="thin-line-bar w-[2px] bg-neutral-600/50 rounded-full h-3"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-500/70 rounded-full h-5"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-400 rounded-full h-9"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt/80 rounded-full h-14"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt rounded-full h-24"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-32"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt rounded-full h-28"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-36"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt rounded-full h-20"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-40"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt rounded-full h-26"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-30"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt/90 rounded-full h-18"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-400 rounded-full h-12"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-500/80 rounded-full h-7"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-600/60 rounded-full h-4"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-500/80 rounded-full h-8"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt/70 rounded-full h-16"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-24"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt rounded-full h-34"></div>
+<div class="thin-line-bar w-[2px] bg-white rounded-full h-26"></div>
+<div class="thin-line-bar w-[2px] bg-accent-volt/80 rounded-full h-14"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-500/70 rounded-full h-6"></div>
+<div class="thin-line-bar w-[2px] bg-neutral-600/40 rounded-full h-3"></div>
+</div>
+<!-- Subtle Ambient Radial Glow -->
+<div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(205,242,0,0.06)_0%,transparent_70%)] pointer-events-none"></div>
+<!-- High-Precision Frequency Footprint -->
+<div class="w-full flex items-center justify-between text-neutral-500 font-mono text-[9px] z-10 pt-1 border-t border-white/[0.04]">
+<span class="tracking-widest">20 HZ</span>
+<span class="text-neutral-400 uppercase tracking-widest flex items-center gap-1 font-mono text-[9px]">
+<span class="w-1 h-1 rounded-full bg-accent-volt/80"></span>
+            Acoustic Pipeline Active
+          </span>
+<span class="tracking-widest">20 KHZ</span>
+</div>
+</div>
+<!-- Live Stream Editorial Transcript Card -->
+<div class="rounded-xl border border-border-subtle bg-surface-container/30 p-4 space-y-2.5">
+<div class="flex items-center justify-between pb-1 border-b border-white/[0.04]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[15px] text-neutral-400">graphic_eq</span>
+<span class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Stream Transcript</span>
+</div>
+<span class="font-mono text-[10px] text-neutral-400 tracking-wide">99.4% precision</span>
+</div>
+<div class="font-body-md text-[13px] text-neutral-300 leading-relaxed font-light tracking-wide">
+          “Finished bench press done three sets of ten with 
+          <span class="text-white font-medium border-b border-accent-volt/50 pb-0.5">80 kilos</span>, 
+          then moved over to 
+          <span class="text-accent-volt font-medium">dumbbell incline</span> 
+          four sets of eight with 
+          <span class="text-white font-medium border-b border-accent-volt/50 pb-0.5">32 kg</span> 
+          dumbbells, wrapped up with tricep pushdowns three sets twelve at 
+          <span class="text-white font-medium border-b border-accent-volt/50 pb-0.5">35 kg</span>...”
+          <span class="inline-block w-[1.5px] h-3.5 bg-accent-volt animate-pulse align-middle ml-1"></span>
+</div>
+</div>
+<!-- Parsed Structured Workout Preview -->
+<div class="space-y-2.5 pt-1">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-xs uppercase tracking-widest text-neutral-400 font-medium">Detected Movements</span>
+<span class="font-mono text-[10px] text-neutral-400 bg-surface-container px-2 py-0.5 rounded-full border border-border-subtle">3</span>
+</div>
+<button class="font-mono text-[11px] text-neutral-400 hover:text-white transition-colors tracking-wider uppercase flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">add</span>
+            Add Movement
+          </button>
+</div>
+<!-- Refined Swiss Exercise Items -->
+<div class="space-y-1.5">
+<!-- Exercise Item 1 -->
+<div class="rounded-lg border border-border-subtle/80 bg-surface-container/50 px-3.5 py-3 flex items-center justify-between hover:border-neutral-700/60 transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<span class="font-mono text-[11px] text-neutral-400 w-4">01</span>
+<div class="min-w-0">
+<h2 class="font-headline-sm text-[14px] text-neutral-100 font-medium truncate">Incline Dumbbell Press</h2>
+<div class="flex items-center gap-2 mt-0.5 font-mono text-[11px] text-neutral-400">
+<span class="text-neutral-300">4 sets</span>
+<span class="text-neutral-600">/</span>
+<span class="text-neutral-300">8 reps</span>
+<span class="text-neutral-600">@</span>
+<span class="text-white font-medium">32 kg</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0">
+<button class="font-mono text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors px-2 py-1 rounded" type="button">Edit</button>
+<span class="material-symbols-outlined text-neutral-600 text-[18px]">chevron_right</span>
+</div>
+</div>
+<!-- Exercise Item 2 -->
+<div class="rounded-lg border border-border-subtle/80 bg-surface-container/50 px-3.5 py-3 flex items-center justify-between hover:border-neutral-700/60 transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<span class="font-mono text-[11px] text-neutral-400 w-4">02</span>
+<div class="min-w-0">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-[14px] text-neutral-100 font-medium truncate">Barbell Bench Press</h2>
+<span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-300">PR +2.5kg</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 font-mono text-[11px] text-neutral-400">
+<span class="text-neutral-300">3 sets</span>
+<span class="text-neutral-600">/</span>
+<span class="text-neutral-300">10 reps</span>
+<span class="text-neutral-600">@</span>
+<span class="text-white font-medium">80 kg</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0">
+<button class="font-mono text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors px-2 py-1 rounded" type="button">Edit</button>
+<span class="material-symbols-outlined text-neutral-600 text-[18px]">chevron_right</span>
+</div>
+</div>
+<!-- Exercise Item 3 -->
+<div class="rounded-lg border border-border-subtle/80 bg-surface-container/50 px-3.5 py-3 flex items-center justify-between hover:border-neutral-700/60 transition-colors">
+<div class="flex items-center gap-3 min-w-0">
+<span class="font-mono text-[11px] text-neutral-400 w-4">03</span>
+<div class="min-w-0">
+<h2 class="font-headline-sm text-[14px] text-neutral-100 font-medium truncate">Tricep Rope Pushdowns</h2>
+<div class="flex items-center gap-2 mt-0.5 font-mono text-[11px] text-neutral-400">
+<span class="text-neutral-300">3 sets</span>
+<span class="text-neutral-600">/</span>
+<span class="text-neutral-300">12 reps</span>
+<span class="text-neutral-600">@</span>
+<span class="text-white font-medium">35 kg</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0">
+<button class="font-mono text-[11px] text-neutral-400 hover:text-neutral-200 transition-colors px-2 py-1 rounded" type="button">Edit</button>
+<span class="material-symbols-outlined text-neutral-600 text-[18px]">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Luxury Primary Action & Secondary Controls -->
+<div class="pt-2 space-y-3">
+<!-- High-End Precision CTA -->
+<button class="w-full h-12 rounded-xl bg-white hover:bg-neutral-100 text-[#0b0c0e] font-headline-sm text-[13px] font-semibold tracking-wider uppercase flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(255,255,255,0.07)] active:scale-[0.99] transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">done_all</span>
+          Confirm &amp; Save Workout (10 Sets)
+        </button>
+<!-- Understated Sub-Controls -->
+<div class="flex items-center justify-center gap-6 pt-1">
+<button class="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-colors font-mono text-[11px] uppercase tracking-wider py-1.5" type="button">
+<span class="material-symbols-outlined text-[15px]">refresh</span>
+            Re-record
+          </button>
+<span class="w-[3px] h-[3px] rounded-full bg-neutral-700"></span>
+<button class="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-colors font-mono text-[11px] uppercase tracking-wider py-1.5" type="button">
+<span class="material-symbols-outlined text-[15px]">tune</span>
+            NLP Calibration
+          </button>
+</div>
+</div>
+</div>
+<!-- Waveform Live Dynamics -->
+<script>
+      const bars = document.querySelectorAll('#waveform-container .thin-line-bar');
+      const dbElement = document.getElementById('decibel-counter');
+      
+      if (bars.length) {
+        setInterval(() => {
+          bars.forEach((bar) => {
+            const randomHeight = Math.floor(Math.random() * 32) + 6;
+            bar.style.height = `${randomHeight}px`;
+          });
+          if (dbElement) {
+            const db = (-17 - (Math.random() * 5)).toFixed(1);
+            dbElement.textContent = `${db} dB`;
+          }
+        }, 180);
+      }
+    </script>
+</main>
+<!-- High-End Minimalist Dark Dock -->
+<nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-[#0b0c0e]/90 backdrop-blur-xl border-t border-border-subtle/50" data-active-classes="text-primary">
+<div class="flex justify-around items-center h-16 px-4">
+<a class="flex flex-col items-center justify-center gap-1 min-w-[56px] text-neutral-500 hover:text-neutral-300 transition-colors" data-path="dashboard" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="font-mono text-[9px] tracking-widest uppercase">Overview</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 min-w-[56px] text-neutral-500 hover:text-neutral-300 transition-colors" data-path="active-workout" href="#">
+<span class="material-symbols-outlined text-[20px]">fitness_center</span>
+<span class="font-mono text-[9px] tracking-widest uppercase">Workout</span>
+</a>
+<a aria-current="page" class="flex flex-col items-center justify-center gap-1 min-w-[56px] text-white transition-colors" data-path="voice-batch" href="#">
+<div class="relative flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px] text-white">graphic_eq</span>
+<span class="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-accent-volt"></span>
+</div>
+<span class="font-mono text-[9px] tracking-widest uppercase text-white font-medium">Voice</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 min-w-[56px] text-neutral-500 hover:text-neutral-300 transition-colors" data-path="progress" href="#">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+<span class="font-mono text-[9px] tracking-widest uppercase">Metrics</span>
+</a>
+</div>
+</nav>
+</body></html>

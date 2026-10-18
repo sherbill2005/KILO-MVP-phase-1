@@ -1,3 +1,81 @@
-# JavaScript/Cloudflare Worker dependencies (source of truth: services/api-worker/package.json)
-@cloudflare/workers-types==4.20260305.1
-wrangler==4.71.0
+// SmartBike Prototype - Basic Hardware Test
+// Relay: GPIO 26
+// Voltage Divider: GPIO 34
+// R1 = 10kΩ
+// R2 = 3.3kΩ
+
+#define RELAY_PIN 26
+#define VOLTAGE_PIN 35
+
+// Voltage divider resistors
+const float R1 = 10000.0;
+const float R2 = 3300.0;
+
+// ESP32 ADC reference approximation
+const float ADC_MAX = 4095.0;
+const float ADC_VOLTAGE = 3.3;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(RELAY_PIN, OUTPUT);
+
+  // Start with relay OFF
+  digitalWrite(RELAY_PIN, LOW);
+
+  // Configure ADC
+  analogReadResolution(12);
+
+  Serial.println();
+  Serial.println("==============================");
+  Serial.println(" SmartBike Hardware Test");
+  Serial.println("==============================");
+  Serial.println("Relay GPIO : 26");
+  Serial.println("Voltage ADC: GPIO 34");
+  Serial.println();
+}
+
+void loop() {
+
+  // =========================
+  // 1. READ BATTERY VOLTAGE
+  // =========================
+
+  int adcValue = analogRead(VOLTAGE_PIN);
+
+  // Voltage appearing at GPIO34
+  float adcVoltage = (adcValue / ADC_MAX) * ADC_VOLTAGE;
+
+  // Calculate original 12V input
+  float batteryVoltage =
+      adcVoltage * ((R1 + R2) / R2);
+
+  Serial.println("------------------------------");
+
+  Serial.print("ADC Value      : ");
+  Serial.println(adcValue);
+
+  Serial.print("ADC Voltage    : ");
+  Serial.print(adcVoltage, 3);
+  Serial.println(" V");
+
+  Serial.print("Battery Voltage: ");
+  Serial.print(batteryVoltage, 2);
+  Serial.println(" V");
+
+  // =========================
+  // 2. RELAY TEST
+  // =========================
+
+  Serial.println("Relay: ON");
+
+  digitalWrite(RELAY_PIN, HIGH);
+
+  delay(2000);
+
+  Serial.println("Relay: OFF");
+
+  digitalWrite(RELAY_PIN, LOW);
+
+  delay(2000);
+}

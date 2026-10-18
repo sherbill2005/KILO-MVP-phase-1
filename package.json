@@ -1,0 +1,17 @@
+{
+  "name": "kilo-monorepo",
+  "version": "1.0.0",
+  "description": "Zero-Touch Voice Workout Tracker Monorepo",
+  "private": true,
+  "scripts": {
+    "mobile:start": "npm --prefix apps/mobile start",
+    "mobile:android": "npm --prefix apps/mobile run android",
+    "mobile:ios": "npm --prefix apps/mobile run ios",
+    "mobile:lint": "npm --prefix apps/mobile run lint",
+    "mobile:test": "npm --prefix apps/mobile test",
+    "worker:dev": "npm --prefix services/api-worker run dev",
+    "worker:deploy": "npm --prefix services/api-worker run deploy",
+    "worker:test": "npm --prefix services/api-worker test",
+    "test": "npm --prefix services/api-worker test"
+  }
+}

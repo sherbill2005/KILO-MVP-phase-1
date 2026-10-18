@@ -1,0 +1,271 @@
+KILO MARKETING CONTEXT
+
+Use this context when helping me create landing page copy, waitlist copy, founder story copy, donation copy, early user messaging, and investor-facing summaries for Kilo.
+
+PROJECT NAME
+Kilo
+
+WHAT KILO IS
+Kilo is a voice workout logger and AI workout tracking assistant for people who train seriously but hate manually logging sets during workouts.
+
+The core promise is simple:
+instead of stopping after every set to type reps and weight into an app, the user can speak naturally and log workouts with much less friction.
+
+CURRENT STAGE
+- Kilo is in the early waitlist / pre-launch stage
+- position it like an early product with a strong direction, not like a fully launched consumer app
+- do not present it as a polished mass-market product
+- do not imply a large user base or fake traction
+- the goal of the landing page is to get people to join the waitlist with email
+- a secondary goal is to let people optionally support development with a donation
+- a longer-term goal is to make the project understandable and compelling to potential investors
+
+TARGET AUDIENCE
+Primary audience:
+1. serious lifters who already track workouts
+2. gym people who know they should track workouts but hate doing it manually
+
+These users already care about progress, progressive overload, and workout history.
+They do not need to be convinced that tracking matters.
+They need to be convinced that Kilo is easier and less annoying than typing.
+
+WHO KILO IS NOT FOR FIRST
+- casual users who do not care about tracking at all
+- people looking for a broad lifestyle wellness app
+- people who mainly want meal plans, social features, or a generic AI fitness coach
+
+CORE PROBLEM
+The real problem is not that workout tracking does not exist.
+The real problem is that logging workouts creates friction in the worst possible moment: during training.
+
+People finish a set and then have to:
+- grab their phone
+- unlock it
+- find the right screen
+- type the exercise
+- type the weight
+- type the reps
+- repeat that again and again
+
+This breaks workout flow, especially when:
+- hands are sweaty
+- heart rate is high
+- the gym is loud
+- the user is mentally focused on lifting, not data entry
+
+Because of this friction, many users:
+- delay logging until later
+- forget details
+- log inconsistently
+- or stop tracking altogether
+
+KILO SOLUTION
+Kilo removes that friction with voice-first workout logging.
+
+The product direction is:
+- the user starts a workout
+- the user uses voice instead of typing
+- the app interprets gym-style input
+- the workout is turned into structured sets
+- the log appears in the workout table
+
+Important product direction:
+- Kilo should feel like it fits naturally into training
+- it should reduce interruption, not add another layer of effort
+- the value is speed, simplicity, and trust
+
+CURRENT PRODUCT DIRECTION
+Right now, the key design direction is a guided voice wizard.
+
+Instead of forcing the user to say everything in one long messy sentence, Kilo is moving toward a flow like:
+1. ask for exercise
+2. ask for set count
+3. ask for reps
+4. ask for weight
+5. show a summary
+6. confirm and log
+
+This matters because it improves accuracy and reduces the chance that one missing detail ruins the entire log.
+
+POSITIONING
+Position Kilo primarily as:
+1. a voice workout logger
+2. an AI workout tracking assistant
+
+Do not position it as:
+- a generic AI app
+- a full fitness lifestyle platform
+- a broad coaching app
+
+Keep the product concrete.
+
+GOOD POSITIONING EXAMPLES
+- voice-first workout logging for lifters
+- the fastest way to log your sets without typing
+- an AI workout logger built for real gym flow
+- built for people who train seriously but hate manual tracking
+
+BAD POSITIONING EXAMPLES
+- your all-in-one wellness ecosystem
+- the future of human performance intelligence
+- an AI life companion for fitness and health
+
+FOUNDER STORY
+The founder story should sound personal and emotional, not corporate.
+
+Key founder angle:
+- I am a solo developer
+- I also train
+- I personally feel the pain of manual workout logging
+- Kilo exists because I wanted a better way to track workouts without breaking flow
+
+The tone should feel like:
+- real
+- personal
+- credible
+- builder-led
+
+The founder story should not sound fake-hyped or polished like a big startup press release.
+
+Examples of the right emotional angle:
+- I love training, but I hate stopping every set just to type numbers into my phone
+- I built Kilo because I wanted workout logging to feel less like admin and more like part of training
+- Kilo started from my own frustration in the gym
+
+TRUST AND HONESTY RULES
+- do not fabricate traction
+- do not claim fake waitlist numbers
+- do not claim fake investors, fake customers, fake testimonials, or fake adoption
+- do not say “100+ joined” unless that is actually true
+- use honest early-stage language instead
+
+Better alternatives:
+- join the early waitlist
+- be one of the first to try Kilo
+- help shape Kilo early
+- early access opening soon
+- built in public by a solo developer
+
+LANDING PAGE GOAL
+The landing page should make a visitor quickly understand:
+1. what Kilo is
+2. why it matters
+3. who it is for
+4. why it is better than manual logging
+5. what they should do next
+
+PRIMARY CTA
+Join the waitlist with email.
+
+SECONDARY CTA
+Support development with a donation if the idea resonates.
+
+DONATION POSITIONING
+Donation messaging should be honest and founder-led.
+
+The right message is:
+- I am building Kilo solo
+- support helps me move faster and make the app better
+- support is optional
+- joining the waitlist still helps a lot
+
+Do not make the donation section sound desperate, manipulative, or scammy.
+It should sound like optional support for an indie builder working on a real product.
+
+INVESTOR ANGLE
+If writing investor-style copy or summaries, focus on:
+- a real repeated pain point
+- high-friction workflow in a committed user segment
+- people who already care about tracking but hate the experience
+- the product wedge is workflow improvement, not novelty AI
+
+The strongest investor-level thesis is:
+Kilo reduces the friction of workout logging for people who already care about tracking, using voice and AI to fit naturally into the flow of training.
+
+The strongest user-level thesis is:
+Kilo helps me log my workout without breaking my workout.
+
+KEY MESSAGING THEMES
+- less tracking, more training
+- stop typing between sets
+- built for real gym flow
+- voice-first workout logging
+- serious training, less friction
+- progress matters, but logging shouldn’t feel like homework
+
+TONE GUIDE
+Use this tone:
+- personal
+- direct
+- simple
+- emotionally real
+- grounded
+- founder-led
+
+Avoid this tone:
+- overhyped
+- corporate
+- too technical
+- generic startup buzzwords
+- fake scarcity
+- fake traction
+
+WHAT TO EMPHASIZE
+- friction of manual logging
+- interruption between sets
+- sweaty hands / loud gym / broken focus
+- consistency and progress tracking
+- speed and convenience
+- voice as a practical workflow improvement, not a gimmick
+
+WHAT NOT TO OVEREMPHASIZE
+- complex AI jargon
+- backend architecture
+- model names
+- overly futuristic claims
+- “revolutionizing fitness” style language
+
+COPYWRITING PREFERENCES
+- make the message easy to understand in a few seconds
+- use concrete gym pain, not abstract productivity language
+- prioritize clarity over cleverness
+- short strong headlines are good
+- emotionally honest copy is better than hype
+
+IF ASKED TO WRITE LANDING PAGE COPY
+Prioritize this structure:
+1. clear headline
+2. short problem statement
+3. simple product explanation
+4. why it is better than typing
+5. waitlist CTA
+6. optional donation/support section
+7. founder note if space allows
+
+IF ASKED TO WRITE WAITLIST COPY
+Focus on:
+- early access
+- being first
+- helping shape the product
+- product built for lifters, not general fitness fluff
+
+IF ASKED TO WRITE DONATION COPY
+Focus on:
+- solo founder
+- real pain point
+- support helps development move faster
+- optional support, no pressure
+
+IF ASKED TO WRITE AN INVESTOR SUMMARY
+Focus on:
+- repeated pain point
+- strong niche audience
+- habit-based utility product
+- workflow improvement wedge
+- trust, speed, and retention as the core success factors
+
+ONE-SENTENCE VERSION
+Kilo is a voice-first workout logger for lifters who care about progress but hate manually tracking every set during a workout.
+
+SHORT PITCH VERSION
+Kilo helps serious lifters log workouts with voice instead of typing, so tracking stops feeling like friction in the middle of training.

@@ -12,6 +12,8 @@ pnpm-debug.log*
 .env
 .env.*
 .dev.vars
+credentials.txt
+*.secrets.txt
 
 # Build / cache
 .dist/
