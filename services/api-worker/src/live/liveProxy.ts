@@ -12,6 +12,16 @@ import { logWorkout } from "./persistWorkout";
 
 const BUFFER_LIMIT_BYTES = 64000;
 
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 function sendMessage(worker: WebSocket, message: WorkerToClientMessage) {
   worker.send(JSON.stringify(message));
 }
@@ -210,7 +220,18 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
         console.log("[DEBUG][LIVE] client session:", sessionId);
         const raw = await env.KILO_KV.get(`session:${sessionId}`);
         if (!raw) {
-          sendMessage(worker, { type: "status", value: "error" });
+          const fallbackSession = {
+            id: sessionId,
+            user_id: "usr_local",
+            workout_date: new Date().toISOString().split("T")[0],
+            group_ids: [],
+            set_ids: [],
+            finished: false,
+          };
+          await env.KILO_KV.put(
+            `session:${sessionId}`,
+            JSON.stringify(fallbackSession)
+          );
         }
       }
 
@@ -223,6 +244,15 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
         );
         if (!setupSent && gemini.readyState === WebSocket.OPEN) {
           sendSetup();
+        }
+      }
+
+      if (msg.type === "audio" && typeof (msg as any).data === "string") {
+        const audioBuf = base64ToArrayBuffer((msg as any).data);
+        if (!sessionId) {
+          bufferAudio(audioBuf);
+        } else {
+          sendAudio(audioBuf);
         }
       }
 

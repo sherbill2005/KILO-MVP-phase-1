@@ -1,6 +1,8 @@
 export type ClientToWorkerMessage =
   | { type: "session"; session_id: string }
-  | { type: "context"; exercises: string[] };
+  | { type: "context"; exercises: string[] }
+  | { type: "audio"; data: string }
+  | { type: "stop" };
 
 export type WorkerToClientMessage =
   | { type: "status"; value: "listening" | "processing" | "error" }
