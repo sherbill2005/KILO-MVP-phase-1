@@ -296,7 +296,12 @@ export const LiveWorkoutScreen: React.FC<LiveWorkoutScreenProps> = ({ onFinish, 
       )}
 
       {/* Floating Center-Docked Push-to-Talk Mic FAB */}
-      <PushToTalkFab onVoiceCommand={handleVoiceCommand} isListening={false} />
+      <PushToTalkFab
+        onVoiceCommand={handleVoiceCommand}
+        isListening={false}
+        sessionId={activeSession?.id || 'live_session'}
+        exerciseContext={CANONICAL_EXERCISES.map((e) => e.name)}
+      />
     </SafeAreaView>
   );
 };

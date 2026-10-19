@@ -19,6 +19,7 @@ import { HapticsService } from '../services/audio/haptics';
 import { SpeechReceiptsService } from '../services/audio/speechReceipts';
 import { useWorkout } from '../context/WorkoutContext';
 import { AudioSessionManager } from '../services/audio/audioSessionManager';
+import { CANONICAL_EXERCISES } from '../models/exercises';
 import { ArrowLeft, Sparkles, Check, Trash2, Mic, Dumbbell } from 'lucide-react-native';
 
 interface BatchWorkoutScreenProps {
@@ -230,7 +231,11 @@ export const BatchWorkoutScreen: React.FC<BatchWorkoutScreenProps> = ({ onFinish
           </View>
         ) : (
           <View style={styles.fabDock}>
-            <PushToTalkFab onVoiceCommand={handleVoiceInput} />
+            <PushToTalkFab
+              onVoiceCommand={handleVoiceInput}
+              sessionId="batch_session"
+              exerciseContext={CANONICAL_EXERCISES.map((e) => e.name)}
+            />
             <Text style={styles.fabSubtext}>HOLD TO SPEAK WHOLE WORKOUT</Text>
           </View>
         )}

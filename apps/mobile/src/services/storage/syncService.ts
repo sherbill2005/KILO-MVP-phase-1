@@ -1,7 +1,7 @@
 import { DatabaseService } from './database';
 import { WorkoutSession } from '../../models/workout';
 
-const WORKER_API_BASE = 'http://127.0.0.1:8787/api';
+const WORKER_API_BASE = 'https://kilo-worker.sherbill2005.workers.dev/api';
 
 export interface SyncStatusResult {
   syncedCount: number;

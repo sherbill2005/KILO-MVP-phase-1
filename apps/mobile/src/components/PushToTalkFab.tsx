@@ -23,12 +23,16 @@ interface PushToTalkFabProps {
   onVoiceCommand: (transcript: string) => void;
   isListening?: boolean;
   disabled?: boolean;
+  sessionId?: string;
+  exerciseContext?: string[];
 }
 
 export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
   onVoiceCommand,
   isListening = false,
   disabled = false,
+  sessionId = 'live_session',
+  exerciseContext = [],
 }) => {
   const [activeListening, setActiveListening] = useState(isListening);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -124,12 +128,22 @@ export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
         // Processing recorded audio
         setIsProcessing(true);
         if (uri) {
-          const res = await AudioClient.uploadAudioForParsing(uri);
+          const res = await AudioClient.uploadAudioForParsing(uri, exerciseContext, sessionId);
           setIsProcessing(false);
-          if (res.ok && res.transcript) {
-            HapticsService.setLoggedSuccess();
-            onVoiceCommand(res.transcript);
-            return;
+          if (res.ok) {
+            if (res.transcript) {
+              HapticsService.setLoggedSuccess();
+              onVoiceCommand(res.transcript);
+              return;
+            } else if (res.workout && res.workout.length > 0) {
+              HapticsService.setLoggedSuccess();
+              const first = res.workout[0];
+              const s = first.sets?.[0];
+              if (s) {
+                onVoiceCommand(`${first.exercise} ${s.weight} ${s.unit || 'kg'} for ${s.reps} reps`);
+              }
+              return;
+            }
           }
         }
         setIsProcessing(false);

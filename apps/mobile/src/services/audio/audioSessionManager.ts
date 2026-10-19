@@ -1,6 +1,31 @@
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { Platform } from 'react-native';
 
+export const PCM_16KHZ_RECORDING_OPTIONS: Audio.RecordingOptions = {
+  android: {
+    extension: '.wav',
+    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+  },
+  ios: {
+    extension: '.wav',
+    audioQuality: Audio.IOSAudioQuality.HIGH,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 128000,
+  },
+};
+
 export class AudioSessionManager {
   private static isPrewarmed = false;
   private static isInitializing = false;
@@ -54,7 +79,7 @@ export class AudioSessionManager {
   }
 
   /**
-   * Starts a low-latency recording using the pre-warmed audio session.
+   * Starts a low-latency 16kHz PCM recording using the pre-warmed audio session.
    * Eliminates the 100-250ms cold-start delay during Push-To-Talk presses.
    */
   public static async startInstantRecording(): Promise<Audio.Recording | null> {
@@ -67,7 +92,7 @@ export class AudioSessionManager {
       }
 
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        PCM_16KHZ_RECORDING_OPTIONS
       );
 
       return recording;
@@ -89,6 +114,31 @@ export class AudioSessionManager {
       return uri;
     } catch (error) {
       console.warn('[AudioSessionManager] Error stopping recording:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Reads a recorded 16kHz WAV file, strips the 44-byte WAV header,
+   * and returns raw 16kHz 16-bit linear PCM samples as a base64 string for Gemini Live.
+   */
+  public static async readPcm16Base64(uri: string): Promise<string | null> {
+    try {
+      const response = await fetch(uri);
+      const arrayBuf = await response.arrayBuffer();
+      // Slice off standard 44-byte WAV header if present
+      const pcmBuffer = arrayBuf.byteLength > 44 ? arrayBuf.slice(44) : arrayBuf;
+      const bytes = new Uint8Array(pcmBuffer);
+      let binary = '';
+      const len = bytes.byteLength;
+      const CHUNK = 8192;
+      for (let i = 0; i < len; i += CHUNK) {
+        const chunk = bytes.subarray(i, Math.min(i + CHUNK, len));
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+      }
+      return btoa(binary);
+    } catch (err) {
+      console.warn('[AudioSessionManager] Error reading PCM16 from WAV:', err);
       return null;
     }
   }

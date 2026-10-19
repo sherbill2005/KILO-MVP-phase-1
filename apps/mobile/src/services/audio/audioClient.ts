@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-
-const WORKER_URL = 'http://127.0.0.1:8787';
+import { AudioSessionManager } from './audioSessionManager';
+import { LiveAudioSocketService } from './liveAudioSocket';
 
 export interface AudioParseResponse {
   ok: boolean;
@@ -10,46 +10,40 @@ export interface AudioParseResponse {
 }
 
 export const AudioClient = {
-  // Transmit recorded audio file to Cloudflare Worker
+  // Transmit recorded 16kHz PCM audio to Cloudflare Gemini Live WebSocket
   uploadAudioForParsing: async (
     audioUri: string,
-    exerciseContext: string[] = []
+    exerciseContext: string[] = [],
+    sessionId: string = 'live_session'
   ): Promise<AudioParseResponse> => {
     try {
       if (Platform.OS === 'web') {
         return { ok: false, error: 'Web audio parsing not supported directly' };
       }
 
-      const formData = new FormData();
-      const filename = audioUri.split('/').pop() || 'recording.m4a';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `audio/${match[1]}` : 'audio/m4a';
-
-      // @ts-ignore - React Native FormData accepts uri/name/type object
-      formData.append('audio', {
-        uri: audioUri,
-        name: filename,
-        type,
-      });
-
-      const response = await fetch(`${WORKER_URL}/api/ai/parse`, {
-        method: 'POST',
-        headers: {
-          'x-exercise-context': exerciseContext.join(','),
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        return { ok: false, error: errText || 'Audio parse failed' };
+      // 1. Read 16kHz raw PCM linear bytes (stripping 44-byte WAV header)
+      const pcm16Base64 = await AudioSessionManager.readPcm16Base64(audioUri);
+      if (!pcm16Base64) {
+        return { ok: false, error: 'Failed to extract PCM16 from audio file' };
       }
 
-      const data = await response.json();
-      return { ok: true, transcript: data.transcript, workout: data.workout };
+      // 2. Stream to Gemini Live WebSocket proxy
+      const result = await LiveAudioSocketService.parseLiveAudio(
+        pcm16Base64,
+        sessionId,
+        exerciseContext
+      );
+
+      return {
+        ok: result.ok,
+        transcript: result.transcript,
+        workout: result.workout,
+        error: result.error,
+      };
     } catch (error) {
-      console.warn('[AudioClient] Cloud upload failed, offline fallback:', error);
+      console.warn('[AudioClient] Live socket parse failed:', error);
       return { ok: false, error: String(error) };
     }
   },
 };
+
