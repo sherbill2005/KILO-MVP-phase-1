@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { HeaderBar } from '../components/HeaderBar';
 import { WorkoutSession } from '../models/workout';
@@ -22,8 +22,10 @@ import {
   ChevronRight,
   Flame,
   Award,
+  RotateCcw,
 } from 'lucide-react-native';
 import { HapticsService } from '../services/audio/haptics';
+import { useWorkout } from '../context/WorkoutContext';
 
 interface HomeScreenProps {
   onStartLiveWorkout: () => void;
@@ -32,22 +34,25 @@ interface HomeScreenProps {
   onOpenSettings: () => void;
 }
 
-import { useWorkout } from '../context/WorkoutContext';
-
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartLiveWorkout,
   onStartBatchWorkout,
   onOpenAnalytics,
   onOpenSettings,
 }) => {
-  const { dataVersion } = useWorkout();
+  const { dataVersion, draftSession, resumeDraftWorkout, discardDraftWorkout } = useWorkout();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [stats, setStats] = useState({ totalSets: 0, totalVolume: 0, totalWorkouts: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     await DatabaseService.init();
-    const list = await DatabaseService.getAllSessions();
+    const [list, calculatedStats] = await Promise.all([
+      DatabaseService.getAllSessions(20, 0),
+      DatabaseService.getWorkoutStats(),
+    ]);
     setSessions(list);
+    setStats(calculatedStats);
   };
 
   useEffect(() => {
@@ -60,17 +65,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     setRefreshing(false);
   };
 
-  // Calculate stats
-  const totalVolume = sessions.reduce((acc, s) => {
-    const sVol = s.groups.reduce((gAcc, g) => {
-      return gAcc + g.sets.reduce((setAcc, set) => setAcc + set.weightValue * set.reps, 0);
-    }, 0);
-    return acc + sVol;
-  }, 0);
-
-  const totalSets = sessions.reduce((acc, s) => {
-    return acc + s.groups.reduce((gAcc, g) => gAcc + g.sets.length, 0);
-  }, 0);
+  const draftSetsCount = draftSession
+    ? draftSession.groups.reduce((acc, g) => acc + g.sets.length, 0)
+    : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,13 +79,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primaryAccent} />
         }
       >
+        {/* Active Draft Recovery Banner */}
+        {draftSession && (
+          <View style={styles.draftRecoveryBanner}>
+            <View style={styles.draftIconContainer}>
+              <RotateCcw size={20} color={COLORS.secondaryAccent} />
+            </View>
+            <View style={styles.draftTextContainer}>
+              <Text style={styles.draftTitle}>Unfinished Workout Found</Text>
+              <Text style={styles.draftSubtitle}>
+                {draftSession.groups.length} exercises · {draftSetsCount} sets ready to resume
+              </Text>
+            </View>
+            <View style={styles.draftActions}>
+              <TouchableOpacity
+                style={styles.resumeDraftBtn}
+                onPress={() => {
+                  resumeDraftWorkout();
+                  onStartLiveWorkout();
+                }}
+              >
+                <Text style={styles.resumeDraftBtnText}>Resume</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.discardDraftBtn} onPress={discardDraftWorkout}>
+                <Text style={styles.discardDraftBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Weekly Stats Hero Card */}
         <View style={styles.heroStatsCard}>
           <View style={styles.heroHeader}>
             <View>
-              <Text style={styles.heroSubtitle}>WEEKLY VOLUME</Text>
+              <Text style={styles.heroSubtitle}>TOTAL VOLUME</Text>
               <Text style={styles.heroVolumeText}>
-                {Math.round(totalVolume).toLocaleString()} <Text style={styles.unitText}>KG</Text>
+                {Math.round(stats.totalVolume).toLocaleString()} <Text style={styles.unitText}>KG</Text>
               </Text>
             </View>
             <TouchableOpacity
@@ -107,12 +133,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatLabel}>Workouts</Text>
-              <Text style={styles.heroStatValue}>{sessions.length}</Text>
+              <Text style={styles.heroStatValue}>{stats.totalWorkouts || sessions.length}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.heroStatItem}>
               <Text style={styles.heroStatLabel}>Total Sets</Text>
-              <Text style={styles.heroStatValue}>{totalSets}</Text>
+              <Text style={styles.heroStatValue}>{stats.totalSets}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.heroStatItem}>
@@ -478,6 +504,63 @@ const styles = StyleSheet.create({
   historyFooterText: {
     fontSize: 11,
     color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  draftRecoveryBanner: {
+    backgroundColor: '#1E1B10',
+    borderColor: COLORS.secondaryAccent,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  draftIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: 'rgba(212, 255, 0, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftTextContainer: {
+    flex: 1,
+  },
+  draftTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  draftSubtitle: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  draftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resumeDraftBtn: {
+    backgroundColor: COLORS.secondaryAccent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  resumeDraftBtnText: {
+    color: '#0B0E14',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  discardDraftBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  discardDraftBtnText: {
+    color: COLORS.textMuted,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

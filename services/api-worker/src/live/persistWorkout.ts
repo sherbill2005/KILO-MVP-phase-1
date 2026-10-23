@@ -21,12 +21,18 @@ export async function logWorkout(
   const set_ids: string[] = [];
 
   for (const ex of workout) {
+    const rawSets = Array.isArray(ex.sets) && ex.sets.length > 0
+      ? ex.sets
+      : (ex.weight != null || ex.reps != null)
+      ? [{ weight: ex.weight, unit: ex.unit, reps: ex.reps }]
+      : [];
+
     const batch = {
       exercise_name: ex.exercise,
-      sets: (ex.sets || []).map((s: any) => ({
-        weight_value: s.weight,
-        weight_unit: s.unit,
-        reps: s.reps,
+      sets: rawSets.map((s: any) => ({
+        weight_value: Number(s.weight ?? s.weight_value ?? 0),
+        weight_unit: (s.unit ?? s.weight_unit ?? "kg").toLowerCase() === "lb" ? "lb" : "kg",
+        reps: Number(s.reps ?? 0),
       })),
     };
 

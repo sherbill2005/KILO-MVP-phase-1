@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { GroupedSetTable } from '../components/GroupedSetTable';
-import { PushToTalkFab } from '../components/PushToTalkFab';
+import { PushToTalkFab, StructuredWorkoutItem } from '../components/PushToTalkFab';
 import { WorkoutSession, WorkoutGroup, WorkoutSet, WeightUnit } from '../models/workout';
 import { contextualWorkoutParser } from '../services/parser/contextualParser';
 import { DatabaseService } from '../services/storage/database';
@@ -42,35 +42,33 @@ export const BatchWorkoutScreen: React.FC<BatchWorkoutScreenProps> = ({ onFinish
     processBatchText(text);
   };
 
-  const processBatchText = (text: string) => {
-    if (!text.trim()) return;
-    setIsProcessing(true);
-    HapticsService.lightTap();
-
-    const results = contextualWorkoutParser.parseBatch(text, 'kg');
+  const applyItems = (items: StructuredWorkoutItem[]) => {
     const sessionId = 'batch_' + Date.now();
+    const now = Date.now();
 
-    const groups: WorkoutGroup[] = results.map((item, gIdx) => {
-      const groupId = `grp_${Date.now()}_${gIdx}`;
-      return {
-        id: groupId,
-        sessionId,
-        exerciseName: item.exercise,
-        targetSets: item.sets.length,
-        createdAt: Date.now(),
-        sets: item.sets.map((s, sIdx) => ({
-          id: `set_${Date.now()}_${gIdx}_${sIdx}`,
-          groupId,
+    const groups: WorkoutGroup[] = items
+      .filter(item => item.exercise && Array.isArray(item.sets) && item.sets.length > 0)
+      .map((item, gIdx) => {
+        const groupId = `grp_${now}_${gIdx}`;
+        return {
+          id: groupId,
           sessionId,
-          setIndex: sIdx + 1,
           exerciseName: item.exercise,
-          weightValue: s.weight,
-          weightUnit: s.unit,
-          reps: s.reps,
-          createdAt: Date.now(),
-        })),
-      };
-    });
+          targetSets: item.sets.length,
+          createdAt: now,
+          sets: item.sets.map((s, sIdx) => ({
+            id: `set_${now}_${gIdx}_${sIdx}`,
+            groupId,
+            sessionId,
+            setIndex: sIdx + 1,
+            exerciseName: item.exercise,
+            weightValue: Number(s.weight) || 0,
+            weightUnit: (s.unit === 'lb' ? 'lb' : 'kg') as WeightUnit,
+            reps: Number(s.reps) || 0,
+            createdAt: now,
+          })),
+        };
+      });
 
     setParsedGroups(groups);
     setIsProcessing(false);
@@ -81,6 +79,21 @@ export const BatchWorkoutScreen: React.FC<BatchWorkoutScreenProps> = ({ onFinish
     } else {
       HapticsService.deleteWarning();
     }
+  };
+
+  // Full AI-extracted workout from voice
+  const handleStructuredWorkout = (workout: StructuredWorkoutItem[], spoken: string) => {
+    setTranscript(spoken);
+    applyItems(workout);
+  };
+
+  // Typed / example text -> local parser
+  const processBatchText = (text: string) => {
+    if (!text.trim()) return;
+    setIsProcessing(true);
+    HapticsService.lightTap();
+    const results = contextualWorkoutParser.parseBatch(text, 'kg');
+    applyItems(results as StructuredWorkoutItem[]);
   };
 
   const handleUpdateSet = (setId: string, newWeight: number, newReps: number) => {
@@ -233,6 +246,7 @@ export const BatchWorkoutScreen: React.FC<BatchWorkoutScreenProps> = ({ onFinish
           <View style={styles.fabDock}>
             <PushToTalkFab
               onVoiceCommand={handleVoiceInput}
+              onStructuredWorkout={handleStructuredWorkout}
               sessionId="batch_session"
               exerciseContext={CANONICAL_EXERCISES.map((e) => e.name)}
             />

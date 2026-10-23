@@ -1,19 +1,22 @@
 {
   "expo": {
     "name": "Kilo",
-    "slug": "kilo",
+    "slug": "kilo-app",
     "version": "1.0.0",
+    "scheme": "kilo",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B0E14",
     "plugins": [
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Kilo needs access to your microphone for zero-touch voice workout logging."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-sqlite"
     ],
     "ios": {
       "supportsTablet": true,
@@ -22,6 +25,7 @@
       }
     },
     "android": {
+      "package": "com.kilo.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0E14",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,12 +34,20 @@
       },
       "permissions": [
         "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
+        "MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ca621a35-fa5b-4db1-8eeb-6dbbd8462f47"
+      }
+    },
+    "owner": "zaidahmed2005s-team"
   }
 }

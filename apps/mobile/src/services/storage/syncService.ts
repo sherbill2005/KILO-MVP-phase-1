@@ -1,7 +1,6 @@
 import { DatabaseService } from './database';
 import { WorkoutSession } from '../../models/workout';
-
-const WORKER_API_BASE = 'https://kilo-worker.sherbill2005.workers.dev/api';
+import { WORKER_API_BASE } from '../../config/api';
 
 export interface SyncStatusResult {
   syncedCount: number;
@@ -25,43 +24,19 @@ export const SyncService = {
 
       for (const session of unsynced) {
         try {
-          // 1. Create remote session
-          const sessRes = await fetch(`${WORKER_API_BASE}/sessions`, {
+          const syncUrl = `${WORKER_API_BASE.replace(/\/api$/, '')}/api/workouts/sync-batch`;
+          const syncRes = await fetch(syncUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              user_id: session.userId || 'usr_local',
-              workout_date: session.workoutDate,
-            }),
+            body: JSON.stringify({ session }),
           });
 
-          if (!sessRes.ok) {
+          if (!syncRes.ok) {
             failedCount++;
             continue;
           }
 
-          const sessData = await sessRes.json();
-          const remoteSessionId = sessData.session_id;
-
-          // 2. Upload each group and set
-          for (const group of session.groups) {
-            if (group.sets.length > 0) {
-              await fetch(`${WORKER_API_BASE}/sessions/${remoteSessionId}/sets`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  exercise_name: group.exerciseName,
-                  sets: group.sets.map(s => ({
-                    weight_value: s.weightValue,
-                    weight_unit: s.weightUnit,
-                    reps: s.reps,
-                  })),
-                }),
-              });
-            }
-          }
-
-          // 3. Mark as synced in local SQLite
+          // Mark as synced in local SQLite
           session.isSynced = true;
           await DatabaseService.saveSession(session);
           syncedCount++;
@@ -81,4 +56,33 @@ export const SyncService = {
       return { syncedCount: 0, failedCount: 0, isOnline: false };
     }
   },
+
+  // Fetch remote session list from Cloudflare Worker KV
+  fetchRemoteSessions: async (userId?: string): Promise<any[]> => {
+    try {
+      const url = userId
+        ? `${WORKER_API_BASE}/sessions?user_id=${encodeURIComponent(userId)}`
+        : `${WORKER_API_BASE}/sessions`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.sessions || [];
+    } catch (err) {
+      console.warn('[SyncService] Failed to fetch remote sessions:', err);
+      return [];
+    }
+  },
+
+  // Fetch full hydrated session with groups and sets from Cloudflare Worker
+  fetchRemoteSessionDetail: async (sessionId: string): Promise<any | null> => {
+    try {
+      const res = await fetch(`${WORKER_API_BASE}/sessions/${sessionId}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.warn('[SyncService] Failed to fetch remote session detail:', err);
+      return null;
+    }
+  },
 };
+

@@ -5,8 +5,8 @@ export type WorkoutSession = {
     group_ids: string[];
     set_ids: string[];
     finished: boolean;
-
- }
+    finished_at?: string;
+}
 
 export type WorkoutSet = {
     id: string;

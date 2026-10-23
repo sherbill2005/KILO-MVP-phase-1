@@ -1,5 +1,5 @@
 import * as Speech from 'expo-speech';
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import { setAudioModeAsync } from 'expo-audio';
 import { PreferencesService } from '../storage/preferences';
 import { Platform } from 'react-native';
 
@@ -8,13 +8,11 @@ let audioConfigured = false;
 async function ensureAudioSession() {
   if (audioConfigured || Platform.OS === 'web') return;
   try {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-      shouldDuckAndroid: true,
-      interruptionModeIOS: InterruptionModeIOS.DuckOthers,
-      interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
+      interruptionMode: 'duckOthers',
+      shouldRouteThroughEarpiece: false,
     });
     audioConfigured = true;
   } catch {

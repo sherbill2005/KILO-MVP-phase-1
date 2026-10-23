@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { GroupedSetTable } from '../components/GroupedSetTable';
 import { RestTimerBar } from '../components/RestTimerBar';
@@ -61,6 +61,22 @@ export const LiveWorkoutScreen: React.FC<LiveWorkoutScreenProps> = ({ onFinish, 
       startLiveWorkout();
     }
   }, [activeSession, startLiveWorkout]);
+
+  // Full AI-extracted workout from voice: log every set
+  const handleStructuredWorkout = (
+    workout: { exercise: string; sets: { weight: number; unit?: string; reps: number }[] }[]
+  ) => {
+    for (const item of workout) {
+      for (const s of item.sets || []) {
+        logSet(
+          item.exercise,
+          Number(s.weight) || 0,
+          s.unit === 'lb' ? 'lb' : 'kg',
+          Number(s.reps) || 0
+        );
+      }
+    }
+  };
 
   // Process Voice Command or Text Shortcut
   const handleVoiceCommand = (transcript: string) => {
@@ -298,6 +314,7 @@ export const LiveWorkoutScreen: React.FC<LiveWorkoutScreenProps> = ({ onFinish, 
       {/* Floating Center-Docked Push-to-Talk Mic FAB */}
       <PushToTalkFab
         onVoiceCommand={handleVoiceCommand}
+        onStructuredWorkout={handleStructuredWorkout}
         isListening={false}
         sessionId={activeSession?.id || 'live_session'}
         exerciseContext={CANONICAL_EXERCISES.map((e) => e.name)}

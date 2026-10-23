@@ -1,7 +1,7 @@
 import { CANONICAL_EXERCISES } from '../../models/exercises';
+import { WORKER_HOST, LIVE_WS_URL } from '../../config/api';
 
-export const WORKER_HOST = 'kilo-worker.sherbill2005.workers.dev';
-export const LIVE_WS_URL = `wss://${WORKER_HOST}/ws/ai/live`;
+export { WORKER_HOST, LIVE_WS_URL };
 
 export interface LiveAudioParseResult {
   ok: boolean;
@@ -27,56 +27,60 @@ export class LiveAudioSocketService {
     return new Promise((resolve) => {
       let timeoutTimer: NodeJS.Timeout | null = null;
       let ws: WebSocket | null = null;
+      let resolved = false;
+      let audioSent = false;
 
-      const cleanup = () => {
+      const finish = (result: LiveAudioParseResult) => {
+        if (resolved) return;
+        resolved = true;
         if (timeoutTimer) clearTimeout(timeoutTimer);
         try {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.close();
-          }
+          if (ws && ws.readyState === WebSocket.OPEN) ws.close();
         } catch {}
+        resolve(result);
       };
 
-      // Set timeout in case network or server stalls (8 seconds)
+      // 15s total timeout — setup + Gemini round-trip can take a while
       timeoutTimer = setTimeout(() => {
-        cleanup();
         console.warn('[LiveAudioSocket] Timeout waiting for Gemini response');
-        resolve({ ok: false, error: 'Request timed out' });
-      }, 8000);
+        finish({ ok: false, error: 'Request timed out' });
+      }, 15000);
 
       try {
         console.log('[LiveAudioSocket] Connecting to', LIVE_WS_URL);
         ws = new WebSocket(LIVE_WS_URL);
 
         ws.onopen = () => {
-          console.log('[LiveAudioSocket] WebSocket connected. Sending handshake...');
+          console.log('[LiveAudioSocket] WebSocket connected. Sending session + context...');
           // 1. Send session handshake
           ws?.send(JSON.stringify({ type: 'session', session_id: sessionId }));
-
-          // 2. Send exercise vocabulary context (first 35 exercises)
+          // 2. Send exercise vocabulary context
           ws?.send(JSON.stringify({ type: 'context', exercises: exerciseContext }));
-
-          // 3. Send raw PCM16 base64 audio
-          ws?.send(JSON.stringify({ type: 'audio', data: pcm16Base64 }));
-
-          // 4. Send stop to demarcate end of utterance
-          ws?.send(JSON.stringify({ type: 'stop' }));
+          // Audio is NOT sent yet — we wait for the "listening" status
+          // which means Gemini has confirmed the setup is complete.
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log('[LiveAudioSocket] Server message:', data.type);
+            console.log('[LiveAudioSocket] Server message:', data.type, data.value ?? '');
 
             if (data.type === 'status' && data.value === 'error') {
-              cleanup();
-              resolve({ ok: false, error: 'Server returned error status' });
+              finish({ ok: false, error: 'Server returned error status' });
+              return;
+            }
+
+            // Gemini setup complete → now safe to send audio
+            if (data.type === 'status' && data.value === 'listening' && !audioSent) {
+              audioSent = true;
+              console.log('[LiveAudioSocket] Gemini ready — sending audio...');
+              ws?.send(JSON.stringify({ type: 'audio', data: pcm16Base64 }));
+              ws?.send(JSON.stringify({ type: 'stop' }));
               return;
             }
 
             if (data.type === 'result') {
-              cleanup();
-              resolve({
+              finish({
                 ok: true,
                 transcript: data.transcript,
                 workout: data.workout,
@@ -90,17 +94,16 @@ export class LiveAudioSocketService {
 
         ws.onerror = (err: any) => {
           console.warn('[LiveAudioSocket] WebSocket error:', err.message || err);
-          cleanup();
-          resolve({ ok: false, error: err.message || 'WebSocket error' });
+          finish({ ok: false, error: err.message || 'WebSocket error' });
         };
 
         ws.onclose = () => {
           console.log('[LiveAudioSocket] WebSocket closed');
+          finish({ ok: false, error: 'WebSocket closed unexpectedly' });
         };
       } catch (err: any) {
-        cleanup();
         console.warn('[LiveAudioSocket] Exception opening WebSocket:', err);
-        resolve({ ok: false, error: String(err) });
+        finish({ ok: false, error: String(err) });
       }
     });
   }

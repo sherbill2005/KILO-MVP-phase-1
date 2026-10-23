@@ -128,7 +128,63 @@ CREATE TABLE sync_queue (
   { "session_id": "d32ca505-b886-49e4-b30c-4ea4c2d01791" }
   ```
 
-#### 2. Log Set or Batch of Sets
+#### 2. List Workout Sessions
+- **Endpoint**: `GET /api/sessions?user_id={user_id}`
+- **Query Params**: `user_id` (optional, filters sessions by user)
+- **Response** (200 OK):
+  ```json
+  {
+    "sessions": [
+      {
+        "id": "d32ca505-b886-49e4-b30c-4ea4c2d01791",
+        "user_id": "usr_123",
+        "workout_date": "2026-09-29",
+        "group_ids": ["grp_456"],
+        "set_ids": ["set_789", "set_790"],
+        "finished": true,
+        "finished_at": "2026-09-29T19:30:00.000Z"
+      }
+    ]
+  }
+  ```
+
+#### 3. Get Hydrated Workout Session
+- **Endpoint**: `GET /api/sessions/{session_id}`
+- **Response** (200 OK):
+  ```json
+  {
+    "id": "d32ca505-b886-49e4-b30c-4ea4c2d01791",
+    "user_id": "usr_123",
+    "workout_date": "2026-09-29",
+    "finished": true,
+    "finished_at": "2026-09-29T19:30:00.000Z",
+    "groups": [
+      {
+        "id": "grp_456",
+        "session_id": "d32ca505-b886-49e4-b30c-4ea4c2d01791",
+        "exercise_name": "bench press",
+        "set_ids": ["set_789", "set_790"],
+        "created_at": "2026-09-29T19:00:00.000Z"
+      }
+    ],
+    "sets": [
+      {
+        "id": "set_789",
+        "session_id": "d32ca505-b886-49e4-b30c-4ea4c2d01791",
+        "group_id": "grp_456",
+        "group_index": 1,
+        "exercise_name": "bench press",
+        "weight_value": 80,
+        "weight_unit": "kg",
+        "reps": 10,
+        "corrected": false,
+        "created_at": "2026-09-29T19:00:00.000Z"
+      }
+    ]
+  }
+  ```
+
+#### 4. Log Set or Batch of Sets
 - **Endpoint**: `POST /api/sessions/{session_id}/sets`
 - **Request Body** (Batch or Single):
   ```json
@@ -145,7 +201,7 @@ CREATE TABLE sync_queue (
   { "group_id": "grp_456", "set_ids": ["set_789", "set_790"] }
   ```
 
-#### 3. Update / Correct Set
+#### 5. Update / Correct Set
 - **Endpoint**: `PATCH /api/sets/{set_id}`
 - **Request Body**:
   ```json
@@ -156,8 +212,12 @@ CREATE TABLE sync_queue (
   { "ok": true }
   ```
 
-#### 4. Finish Workout Session
+#### 6. Finish Workout Session
 - **Endpoint**: `POST /api/sessions/{session_id}/finish`
+- **Request Body** (Optional):
+  ```json
+  { "finished_at": "2026-09-29T19:30:00.000Z" }
+  ```
 - **Response** (200 OK):
   ```json
   { "ok": true, "finished_at": "2026-09-29T19:30:00.000Z" }

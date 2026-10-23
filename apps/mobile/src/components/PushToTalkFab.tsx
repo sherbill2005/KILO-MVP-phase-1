@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import type { AudioRecorder } from 'expo-audio';
 import { COLORS } from '../theme/colors';
 import { Mic, Keyboard, X, Send, Sparkles, Volume2 } from 'lucide-react-native';
 import { HapticsService } from '../services/audio/haptics';
@@ -19,8 +19,15 @@ import { AudioClient } from '../services/audio/audioClient';
 
 import { AudioSessionManager } from '../services/audio/audioSessionManager';
 
+export interface StructuredWorkoutItem {
+  exercise: string;
+  sets: { weight: number; unit?: string; reps: number }[];
+}
+
 interface PushToTalkFabProps {
   onVoiceCommand: (transcript: string) => void;
+  /** Receives the full AI-extracted workout (all exercises + sets). */
+  onStructuredWorkout?: (workout: StructuredWorkoutItem[], transcript: string) => void;
   isListening?: boolean;
   disabled?: boolean;
   sessionId?: string;
@@ -29,6 +36,7 @@ interface PushToTalkFabProps {
 
 export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
   onVoiceCommand,
+  onStructuredWorkout,
   isListening = false,
   disabled = false,
   sessionId = 'live_session',
@@ -38,7 +46,7 @@ export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
   const [typedCommand, setTypedCommand] = useState('');
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingRef = useRef<AudioRecorder | null>(null);
   const recordStartTimeRef = useRef<number>(0);
 
   // Pulsing animation
@@ -119,9 +127,9 @@ export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
         const uri = await AudioSessionManager.stopRecording(recordingRef.current);
         recordingRef.current = null;
 
-        // If held for less than 350ms, open quick helper modal
+        // If held for less than 350ms, give a subtle haptic reminder instead of intruding with modal
         if (duration < 350) {
-          setShowTextModal(true);
+          HapticsService.lightTap();
           return;
         }
 
@@ -131,30 +139,35 @@ export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
           const res = await AudioClient.uploadAudioForParsing(uri, exerciseContext, sessionId);
           setIsProcessing(false);
           if (res.ok) {
-            if (res.transcript) {
+            if (res.workout && res.workout.length > 0 && onStructuredWorkout) {
               HapticsService.setLoggedSuccess();
-              onVoiceCommand(res.transcript);
+              onStructuredWorkout(res.workout, res.transcript || '');
               return;
-            } else if (res.workout && res.workout.length > 0) {
+            }
+            if (res.workout && res.workout.length > 0) {
               HapticsService.setLoggedSuccess();
               const first = res.workout[0];
               const s = first.sets?.[0];
               if (s) {
                 onVoiceCommand(`${first.exercise} ${s.weight} ${s.unit || 'kg'} for ${s.reps} reps`);
+                return;
               }
+            }
+            if (res.transcript && res.transcript.trim()) {
+              HapticsService.setLoggedSuccess();
+              onVoiceCommand(res.transcript.trim());
               return;
             }
+          } else {
+            HapticsService.deleteWarning();
           }
         }
         setIsProcessing(false);
-        setShowTextModal(true);
-      } else {
-        setShowTextModal(true);
       }
     } catch (err) {
       console.warn('[Audio] Stop recording error:', err);
       setIsProcessing(false);
-      setShowTextModal(true);
+      HapticsService.deleteWarning();
     }
   };
 

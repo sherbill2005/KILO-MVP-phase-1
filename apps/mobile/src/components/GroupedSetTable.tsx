@@ -95,11 +95,11 @@ export const GroupedSetTable: React.FC<GroupedSetTableProps> = ({
 
             {/* Table Header */}
             <View style={styles.tableHeaderRow}>
-              <Text style={[styles.thCell, { flex: 0.8 }]}>SET</Text>
-              <Text style={[styles.thCell, { flex: 1.4 }]}>WEIGHT</Text>
-              <Text style={[styles.thCell, { flex: 1.2 }]}>REPS</Text>
-              <Text style={[styles.thCell, { flex: 1.4 }]}>1RM EST</Text>
-              <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]}>ACTIONS</Text>
+              <Text style={[styles.thCell, { flex: 0.8 }]} allowFontScaling={false}>SET</Text>
+              <Text style={[styles.thCell, { flex: 1.4 }]} allowFontScaling={false}>WEIGHT</Text>
+              <Text style={[styles.thCell, { flex: 1.2 }]} allowFontScaling={false}>REPS</Text>
+              <Text style={[styles.thCell, { flex: 1.4 }]} allowFontScaling={false}>1RM EST</Text>
+              <Text style={[styles.thCell, { flex: 1.2, textAlign: 'right' }]} allowFontScaling={false}>ACTIONS</Text>
             </View>
 
             {/* Table Rows */}
@@ -117,7 +117,7 @@ export const GroupedSetTable: React.FC<GroupedSetTableProps> = ({
                 >
                   <View style={[styles.tdCell, { flex: 0.8 }]}>
                     <View style={styles.setNumberBadge}>
-                      <Text style={styles.setNumberText}>{set.setIndex || sIdx + 1}</Text>
+                      <Text style={styles.setNumberText} allowFontScaling={false}>{set.setIndex || sIdx + 1}</Text>
                     </View>
                   </View>
 
@@ -125,8 +125,8 @@ export const GroupedSetTable: React.FC<GroupedSetTableProps> = ({
                     style={[styles.tdCell, { flex: 1.4 }]}
                     onPress={() => openEditModal(set)}
                   >
-                    <Text style={styles.weightText}>
-                      {set.weightValue} <Text style={styles.unitText}>{set.weightUnit}</Text>
+                    <Text style={styles.weightText} allowFontScaling={false}>
+                      {set.weightValue} <Text style={styles.unitText} allowFontScaling={false}>{set.weightUnit}</Text>
                     </Text>
                   </TouchableOpacity>
 
@@ -134,12 +134,12 @@ export const GroupedSetTable: React.FC<GroupedSetTableProps> = ({
                     style={[styles.tdCell, { flex: 1.2 }]}
                     onPress={() => openEditModal(set)}
                   >
-                    <Text style={styles.repsText}>{set.reps}</Text>
+                    <Text style={styles.repsText} allowFontScaling={false}>{set.reps}</Text>
                   </TouchableOpacity>
 
                   <View style={[styles.tdCell, { flex: 1.4 }]}>
-                    <Text style={styles.est1RMText}>
-                      {est1RM} <Text style={styles.unitText}>{set.weightUnit}</Text>
+                    <Text style={styles.est1RMText} allowFontScaling={false}>
+                      {est1RM} <Text style={styles.unitText} allowFontScaling={false}>{set.weightUnit}</Text>
                     </Text>
                   </View>
 

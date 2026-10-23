@@ -1,24 +1,31 @@
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
-import { Platform } from 'react-native';
+import {
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+  AudioModule,
+  IOSOutputFormat,
+  AudioQuality,
+  type AudioRecorder,
+  type RecordingOptions,
+} from 'expo-audio';
+import { Platform, AppState, type AppStateStatus } from 'react-native';
+import { File } from 'expo-file-system';
 
-export const PCM_16KHZ_RECORDING_OPTIONS: Audio.RecordingOptions = {
+export const VOICE_RECORDING_OPTIONS: RecordingOptions = {
+  extension: '.m4a',
+  sampleRate: 44100,
+  numberOfChannels: 1,
+  bitRate: 128000,
   android: {
-    extension: '.wav',
-    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 256000,
+    extension: '.m4a',
+    outputFormat: 'mpeg4',
+    audioEncoder: 'aac',
+    sampleRate: 44100,
   },
   ios: {
-    extension: '.wav',
-    audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 256000,
-    linearPCMBitDepth: 16,
-    linearPCMIsBigEndian: false,
-    linearPCMIsFloat: false,
+    extension: '.m4a',
+    outputFormat: IOSOutputFormat.MPEG4AAC,
+    audioQuality: AudioQuality.HIGH,
+    sampleRate: 44100,
   },
   web: {
     mimeType: 'audio/webm',
@@ -26,14 +33,19 @@ export const PCM_16KHZ_RECORDING_OPTIONS: Audio.RecordingOptions = {
   },
 };
 
+export const PCM_16KHZ_RECORDING_OPTIONS = VOICE_RECORDING_OPTIONS;
+
+
 export class AudioSessionManager {
   private static isPrewarmed = false;
   private static isInitializing = false;
   private static permissionGranted = false;
+  private static activeRecorder: AudioRecorder | null = null;
+  private static appStateSubscribed = false;
 
   /**
    * Pre-warms the Audio session subsystem, requests mic permissions upfront,
-   * and configures Bluetooth headset / hands-free routing (PlayAndRecord) + background audio.
+   * and configures Bluetooth headset / hands-free routing + background audio.
    */
   public static async prewarm(): Promise<boolean> {
     if (Platform.OS === 'web') return true;
@@ -43,8 +55,8 @@ export class AudioSessionManager {
     this.isInitializing = true;
     try {
       // 1. Request microphone permissions upfront
-      const { status } = await Audio.requestPermissionsAsync();
-      this.permissionGranted = status === 'granted';
+      const { granted } = await requestRecordingPermissionsAsync();
+      this.permissionGranted = granted;
 
       if (!this.permissionGranted) {
         console.warn('[AudioSessionManager] Microphone permission not granted');
@@ -53,20 +65,23 @@ export class AudioSessionManager {
       }
 
       // 2. Configure audio session for zero-touch gym usage:
-      // - allowsRecordingIOS: enables mic input
-      // - playsInSilentModeIOS: allows earbud speech receipts even with iPhone ringer switched to silent
-      // - staysActiveInBackground: keeps audio pipeline responsive
-      // - shouldDuckAndroid: lowers background music (Spotify/Apple Music) while speaking receipts
-      // - playThroughEarpieceAndroid: false (routes through Bluetooth/Speaker)
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-        interruptionModeIOS: InterruptionModeIOS.DuckOthers,
-        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        shouldRouteThroughEarpiece: false,
+        interruptionMode: 'duckOthers',
       });
+
+      // 3. Listen for OS audio interruptions (phone call, alarm, screen lock)
+      if (!this.appStateSubscribed) {
+        AppState.addEventListener('change', (nextState: AppStateStatus) => {
+          if (nextState !== 'active' && this.activeRecorder) {
+            console.log('[AudioSessionManager] App interrupted by OS, safely stopping recording...');
+            this.cancelActiveRecording();
+          }
+        });
+        this.appStateSubscribed = true;
+      }
 
       this.isPrewarmed = true;
       return true;
@@ -80,9 +95,9 @@ export class AudioSessionManager {
 
   /**
    * Starts a low-latency 16kHz PCM recording using the pre-warmed audio session.
-   * Eliminates the 100-250ms cold-start delay during Push-To-Talk presses.
+   * Eliminates the cold-start delay during Push-To-Talk presses.
    */
-  public static async startInstantRecording(): Promise<Audio.Recording | null> {
+  public static async startInstantRecording(): Promise<AudioRecorder | null> {
     if (Platform.OS === 'web') return null;
 
     try {
@@ -91,11 +106,12 @@ export class AudioSessionManager {
         if (!ready) return null;
       }
 
-      const { recording } = await Audio.Recording.createAsync(
-        PCM_16KHZ_RECORDING_OPTIONS
-      );
+      const recorder = new AudioModule.AudioRecorder(PCM_16KHZ_RECORDING_OPTIONS);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      this.activeRecorder = recorder;
 
-      return recording;
+      return recorder;
     } catch (error) {
       console.warn('[AudioSessionManager] Failed to start instant recording:', error);
       return null;
@@ -103,17 +119,63 @@ export class AudioSessionManager {
   }
 
   /**
-   * Safely stops and unloads a recording, returning the local file URI.
+   * Safely stops a recording, returning the local file URI.
    */
-  public static async stopRecording(recording: Audio.Recording | null): Promise<string | null> {
-    if (!recording) return null;
+  public static async stopRecording(recorder: AudioRecorder | null): Promise<string | null> {
+    if (!recorder) return null;
+    if (this.activeRecorder === recorder) {
+      this.activeRecorder = null;
+    }
 
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      await recorder.stop();
+      const uri = recorder.uri;
       return uri;
     } catch (error) {
       console.warn('[AudioSessionManager] Error stopping recording:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Safely aborts any in-progress recording when interrupted by phone call or OS
+   */
+  public static async cancelActiveRecording(): Promise<void> {
+    if (!this.activeRecorder) return;
+    try {
+      const rec = this.activeRecorder;
+      this.activeRecorder = null;
+      await rec.stop();
+      if (rec.uri) {
+        try {
+          const file = new File(rec.uri);
+          if (file.exists) file.delete();
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('[AudioSessionManager] Cancel recording error:', e);
+    }
+  }
+
+  /**
+   * Reads a recorded audio file (.m4a, .wav, etc.) and returns the clean base64 data.
+   */
+  public static async readAudioBase64(uri: string): Promise<string | null> {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          const commaIndex = base64data.indexOf(',');
+          resolve(commaIndex !== -1 ? base64data.slice(commaIndex + 1) : base64data);
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn('[AudioSessionManager] Error reading audio base64:', err);
       return null;
     }
   }

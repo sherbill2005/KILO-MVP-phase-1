@@ -111,52 +111,81 @@ export const DatabaseService = {
       await db.execAsync(`
         PRAGMA journal_mode = WAL;
         PRAGMA foreign_keys = ON;
-
-        CREATE TABLE IF NOT EXISTS sessions (
-          id TEXT PRIMARY KEY NOT NULL,
-          user_id TEXT NOT NULL,
-          workout_date TEXT NOT NULL,
-          started_at INTEGER NOT NULL,
-          finished_at INTEGER,
-          mode TEXT NOT NULL,
-          is_synced INTEGER NOT NULL DEFAULT 0
-        );
-
-        CREATE TABLE IF NOT EXISTS workout_groups (
-          id TEXT PRIMARY KEY NOT NULL,
-          session_id TEXT NOT NULL,
-          exercise_name TEXT NOT NULL,
-          target_sets INTEGER,
-          created_at INTEGER NOT NULL,
-          FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS workout_sets (
-          id TEXT PRIMARY KEY NOT NULL,
-          group_id TEXT NOT NULL,
-          session_id TEXT NOT NULL,
-          set_index INTEGER NOT NULL,
-          exercise_name TEXT NOT NULL,
-          weight_value REAL NOT NULL,
-          weight_unit TEXT NOT NULL,
-          reps INTEGER NOT NULL,
-          is_corrected INTEGER NOT NULL DEFAULT 0,
-          created_at INTEGER NOT NULL,
-          FOREIGN KEY(group_id) REFERENCES workout_groups(id) ON DELETE CASCADE,
-          FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS sync_queue (
-          id TEXT PRIMARY KEY NOT NULL,
-          action TEXT NOT NULL,
-          payload TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          retry_count INTEGER NOT NULL DEFAULT 0
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_sets_session ON workout_sets(session_id);
-        CREATE INDEX IF NOT EXISTS idx_sets_exercise ON workout_sets(exercise_name);
       `);
+
+      // Versioned Schema Migration Runner
+      const versionResult = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+      const currentVersion = versionResult?.user_version || 0;
+
+      if (currentVersion < 1) {
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY NOT NULL,
+            user_id TEXT NOT NULL,
+            workout_date TEXT NOT NULL,
+            started_at INTEGER NOT NULL,
+            finished_at INTEGER,
+            mode TEXT NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0
+          );
+
+          CREATE TABLE IF NOT EXISTS workout_groups (
+            id TEXT PRIMARY KEY NOT NULL,
+            session_id TEXT NOT NULL,
+            exercise_name TEXT NOT NULL,
+            target_sets INTEGER,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+          );
+
+          CREATE TABLE IF NOT EXISTS workout_sets (
+            id TEXT PRIMARY KEY NOT NULL,
+            group_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            set_index INTEGER NOT NULL,
+            exercise_name TEXT NOT NULL,
+            weight_value REAL NOT NULL,
+            weight_unit TEXT NOT NULL,
+            reps INTEGER NOT NULL,
+            is_corrected INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY(group_id) REFERENCES workout_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+          );
+
+          CREATE TABLE IF NOT EXISTS sync_queue (
+            id TEXT PRIMARY KEY NOT NULL,
+            action TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            retry_count INTEGER NOT NULL DEFAULT 0
+          );
+
+          CREATE TABLE IF NOT EXISTS active_draft_session (
+            id TEXT PRIMARY KEY NOT NULL,
+            session_data TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_sets_session ON workout_sets(session_id);
+          CREATE INDEX IF NOT EXISTS idx_sets_exercise ON workout_sets(exercise_name);
+          CREATE INDEX IF NOT EXISTS idx_groups_session ON workout_groups(session_id);
+          PRAGMA user_version = 1;
+        `);
+      }
+
+      if (currentVersion < 2) {
+        // Migration 2: Add dynamic custom exercises dictionary
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS custom_exercises (
+            id TEXT PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            created_at INTEGER NOT NULL
+          );
+          CREATE INDEX IF NOT EXISTS idx_custom_ex_name ON custom_exercises(name);
+          PRAGMA user_version = 2;
+        `);
+      }
 
       // Check if sessions table is empty; if so, populate sample data or migrate from AsyncStorage
       const countResult = await db.getFirstAsync<{ count: number }>(
@@ -176,14 +205,14 @@ export const DatabaseService = {
     }
   },
 
-  // Get all completed/saved workout sessions
-  getAllSessions: async (): Promise<WorkoutSession[]> => {
+  // Get completed/saved workout sessions with pagination
+  getAllSessions: async (limit: number = 50, offset: number = 0): Promise<WorkoutSession[]> => {
     if (Platform.OS === 'web') {
       try {
         const json = await AsyncStorage.getItem(LEGACY_STORAGE_KEYS.SESSIONS);
         if (!json) return [];
         const list: WorkoutSession[] = JSON.parse(json);
-        return list.sort((a, b) => b.startedAt - a.startedAt);
+        return list.sort((a, b) => b.startedAt - a.startedAt).slice(offset, offset + limit);
       } catch {
         return [];
       }
@@ -201,7 +230,11 @@ export const DatabaseService = {
         finished_at: number | null;
         mode: 'LIVE' | 'BATCH';
         is_synced: number;
-      }>('SELECT * FROM sessions ORDER BY started_at DESC');
+      }>('SELECT * FROM sessions ORDER BY started_at DESC LIMIT ? OFFSET ?', [limit, offset]);
+
+      if (sessionRows.length === 0) return [];
+      const sessionIds = sessionRows.map(s => s.id);
+      const placeholders = sessionIds.map(() => '?').join(',');
 
       const groupRows = await db.getAllAsync<{
         id: string;
@@ -209,7 +242,10 @@ export const DatabaseService = {
         exercise_name: string;
         target_sets: number | null;
         created_at: number;
-      }>('SELECT * FROM workout_groups ORDER BY created_at ASC');
+      }>(
+        `SELECT * FROM workout_groups WHERE session_id IN (${placeholders}) ORDER BY created_at ASC`,
+        sessionIds
+      );
 
       const setRows = await db.getAllAsync<{
         id: string;
@@ -222,7 +258,10 @@ export const DatabaseService = {
         reps: number;
         is_corrected: number;
         created_at: number;
-      }>('SELECT * FROM workout_sets ORDER BY set_index ASC');
+      }>(
+        `SELECT * FROM workout_sets WHERE session_id IN (${placeholders}) ORDER BY set_index ASC`,
+        sessionIds
+      );
 
       const result: WorkoutSession[] = sessionRows.map(s => {
         const sessionGroups = groupRows
@@ -398,5 +437,136 @@ export const DatabaseService = {
       if (!db) return;
       await db.runAsync('DELETE FROM sync_queue');
     } catch {}
+  },
+
+  // Native High-Performance SQL Aggregations
+  getWorkoutStats: async (): Promise<{ totalSets: number; totalVolume: number; totalWorkouts: number }> => {
+    if (Platform.OS === 'web') {
+      const all = await DatabaseService.getAllSessions(100, 0);
+      let totalSets = 0;
+      let totalVolume = 0;
+      for (const s of all) {
+        for (const g of s.groups) {
+          totalSets += g.sets.length;
+          for (const st of g.sets) {
+            totalVolume += st.weightValue * st.reps;
+          }
+        }
+      }
+      return { totalSets, totalVolume: Math.round(totalVolume * 10) / 10, totalWorkouts: all.length };
+    }
+
+    try {
+      const db = await getDb();
+      if (!db) return { totalSets: 0, totalVolume: 0, totalWorkouts: 0 };
+
+      const stats = await db.getFirstAsync<{ total_sets: number; total_volume: number }>(
+        'SELECT COUNT(*) as total_sets, COALESCE(SUM(weight_value * reps), 0) as total_volume FROM workout_sets'
+      );
+      const countRes = await db.getFirstAsync<{ total_workouts: number }>(
+        'SELECT COUNT(*) as total_workouts FROM sessions'
+      );
+
+      return {
+        totalSets: stats?.total_sets || 0,
+        totalVolume: Math.round((stats?.total_volume || 0) * 10) / 10,
+        totalWorkouts: countRes?.total_workouts || 0,
+      };
+    } catch (e) {
+      console.warn('[SQLite] getWorkoutStats error:', e);
+      return { totalSets: 0, totalVolume: 0, totalWorkouts: 0 };
+    }
+  },
+
+  // Active Draft Session WAL (Write-Ahead Log) for Crash Recovery
+  saveDraftSession: async (session: WorkoutSession): Promise<void> => {
+    if (Platform.OS === 'web') {
+      try {
+        await AsyncStorage.setItem('@kilo_active_draft', JSON.stringify(session));
+      } catch {}
+      return;
+    }
+
+    try {
+      const db = await getDb();
+      if (!db) return;
+      await db.runAsync(
+        'INSERT OR REPLACE INTO active_draft_session (id, session_data, updated_at) VALUES (?, ?, ?)',
+        ['current_active_draft', JSON.stringify(session), Date.now()]
+      );
+    } catch (e) {
+      console.warn('[SQLite] saveDraftSession error:', e);
+    }
+  },
+
+  getDraftSession: async (): Promise<WorkoutSession | null> => {
+    if (Platform.OS === 'web') {
+      try {
+        const raw = await AsyncStorage.getItem('@kilo_active_draft');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      const db = await getDb();
+      if (!db) return null;
+      const row = await db.getFirstAsync<{ session_data: string }>(
+        'SELECT session_data FROM active_draft_session WHERE id = ?',
+        ['current_active_draft']
+      );
+      return row ? (JSON.parse(row.session_data) as WorkoutSession) : null;
+    } catch (e) {
+      console.warn('[SQLite] getDraftSession error:', e);
+      return null;
+    }
+  },
+
+  clearDraftSession: async (): Promise<void> => {
+    if (Platform.OS === 'web') {
+      try {
+        await AsyncStorage.removeItem('@kilo_active_draft');
+      } catch {}
+      return;
+    }
+
+    try {
+      const db = await getDb();
+      if (!db) return;
+      await db.runAsync('DELETE FROM active_draft_session WHERE id = ?', ['current_active_draft']);
+    } catch (e) {
+      console.warn('[SQLite] clearDraftSession error:', e);
+    }
+  },
+
+  // Custom User Exercises
+  getCustomExercises: async (): Promise<string[]> => {
+    if (Platform.OS === 'web') return [];
+    try {
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db.getAllAsync<{ name: string }>(
+        'SELECT name FROM custom_exercises ORDER BY name ASC'
+      );
+      return rows.map(r => r.name);
+    } catch {
+      return [];
+    }
+  },
+
+  saveCustomExercise: async (name: string): Promise<void> => {
+    if (Platform.OS === 'web' || !name || !name.trim()) return;
+    try {
+      const db = await getDb();
+      if (!db) return;
+      const clean = name.trim();
+      await db.runAsync(
+        'INSERT OR IGNORE INTO custom_exercises (id, name, created_at) VALUES (?, ?, ?)',
+        ['cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6), clean, Date.now()]
+      );
+    } catch (e) {
+      console.warn('[SQLite] saveCustomExercise error:', e);
+    }
   },
 };

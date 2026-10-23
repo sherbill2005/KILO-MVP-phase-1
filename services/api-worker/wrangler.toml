@@ -7,5 +7,6 @@ binding = "KILO_KV"
 id = "f41a1bd74af346ccbd18814321a8facc"
 
 [vars]
-GEMINI_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
+GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_LIVE_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 

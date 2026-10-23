@@ -52,24 +52,35 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
     "https://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent" +
     `?key=${env.GEMINI_API_KEY}`;
 
-  const geminiResp = await fetch(url, {
-    headers: { Upgrade: "websocket" },
-  });
-  const geminiSocket = geminiResp.webSocket;
-  if (!geminiSocket) {
+  let gemini: WebSocket;
+  try {
+    const geminiResp = await fetch(url, {
+      headers: { Upgrade: "websocket" },
+    });
+    const geminiSocket = geminiResp.webSocket;
+    if (!geminiSocket) {
+      console.error("[live] Gemini WS upgrade failed");
+      sendMessage(worker, { type: "status", value: "error" });
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    gemini = geminiSocket;
+    gemini.accept();
+  } catch (err) {
+    console.error("[live] Gemini WS connect error", err);
     sendMessage(worker, { type: "status", value: "error" });
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  const gemini = geminiSocket;
-  gemini.accept();
   gemini.addEventListener("error", (event) => {
     console.error("[live] gemini WS error", event);
+    sendMessage(worker, { type: "status", value: "error" });
   });
   gemini.addEventListener("close", (event) => {
+    console.log("[live] gemini WS close", event.code, event.reason);
     if (event.code !== 1000) {
-      console.error("[live] gemini WS close", event.code, event.reason);
+      sendMessage(worker, { type: "status", value: "error" });
     }
+    try { worker.close(event.code || 1000, event.reason || "gemini closed"); } catch {}
   });
 
   function bufferAudio(chunk: ArrayBuffer) {
@@ -95,12 +106,12 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
   function sendSetup() {
     if (setupSent) return;
     setupSent = true;
-    console.log("[DEBUG][LIVE] sending Gemini setup");
+    console.log("[DEBUG][LIVE] sending Gemini setup for model:", model);
     gemini.send(
       JSON.stringify(createSetupMessage(model, exerciseContext))
     );
-    setupComplete = true;
-    flushBufferedAudio();
+    // NOTE: Do NOT set setupComplete here.
+    // Audio stays buffered until Gemini confirms setup via setupComplete message.
   }
 
   function sendAudio(chunk: ArrayBuffer) {
@@ -134,49 +145,77 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
       return;
     }
 
-    if (!msg) return;
+    if (!msg) {
+      console.log("[DEBUG][LIVE] gemini msg was null/undefined");
+      return;
+    }
+
+    // Log every message's top-level keys
+    console.log("[DEBUG][LIVE] gemini msg keys:", Object.keys(msg).join(", "));
 
     if (msg.setupComplete || msg.setup_complete) {
       setupComplete = true;
-      console.log("[DEBUG][LIVE] Gemini setup complete");
+      console.log("[DEBUG][LIVE] Gemini setup complete — flushing buffered audio");
       sendMessage(worker, { type: "status", value: "listening" });
+      flushBufferedAudio();
       return;
     }
 
     const serverContent = msg.serverContent || msg.server_content;
-    if (!serverContent) return;
+    if (!serverContent) {
+      console.log("[DEBUG][LIVE] no serverContent, raw msg:", JSON.stringify(msg).slice(0, 500));
+      return;
+    }
+
+    console.log("[DEBUG][LIVE] serverContent keys:", Object.keys(serverContent).join(", "));
 
     const parts =
       serverContent.modelTurn?.parts || serverContent.model_turn?.parts || [];
+    
     for (const part of parts) {
-      if (part.text) accumulatedText += part.text;
+      if (part.text) {
+        console.log("[DEBUG][LIVE] text part:", part.text.slice(0, 200));
+        accumulatedText += part.text;
+      }
+      if (part.inlineData || part.inline_data) {
+        const d = part.inlineData || part.inline_data;
+        console.log("[DEBUG][LIVE] audio part, mime:", d?.mimeType || d?.mime_type, "len:", d?.data?.length || 0);
+      }
     }
 
     if (
       serverContent.inputTranscription?.text ||
       serverContent.input_transcription?.text
     ) {
-      inputTranscript +=
-        serverContent.inputTranscription?.text ||
-        serverContent.input_transcription?.text ||
-        "";
+      const t = serverContent.inputTranscription?.text ||
+        serverContent.input_transcription?.text || "";
+      console.log("[DEBUG][LIVE] inputTranscription:", t.slice(0, 200));
+      inputTranscript += t;
     }
 
     if (
       serverContent.outputTranscription?.text ||
       serverContent.output_transcription?.text
     ) {
-      outputTranscript +=
-        serverContent.outputTranscription?.text ||
-        serverContent.output_transcription?.text ||
-        "";
+      const t = serverContent.outputTranscription?.text ||
+        serverContent.output_transcription?.text || "";
+      console.log("[DEBUG][LIVE] outputTranscription:", t.slice(0, 200));
+      outputTranscript += t;
     }
 
     if (serverContent.turnComplete || serverContent.turn_complete) {
-      console.log("[DEBUG][LIVE] Gemini turn complete");
+      console.log("[DEBUG][LIVE] === TURN COMPLETE ===");
+      console.log("[DEBUG][LIVE] accumulatedText:", accumulatedText.slice(0, 500));
+      console.log("[DEBUG][LIVE] inputTranscript:", inputTranscript.slice(0, 500));
+      console.log("[DEBUG][LIVE] outputTranscript:", outputTranscript.slice(0, 500));
+
       const textSource = outputTranscript || accumulatedText;
+      console.log("[DEBUG][LIVE] textSource for JSON parse:", textSource.slice(0, 500));
+
       const parsed = extractJson(textSource);
       const transcript = inputTranscript || "";
+
+      console.log("[DEBUG][LIVE] parsed result:", parsed ? JSON.stringify(parsed).slice(0, 300) : "null");
 
       accumulatedText = "";
       inputTranscript = "";
@@ -186,6 +225,7 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
         try {
           sendMessage(worker, { type: "status", value: "processing" });
           if (!sessionId) {
+            console.error("[DEBUG][LIVE] no sessionId at turnComplete");
             sendMessage(worker, { type: "status", value: "error" });
             return;
           }
@@ -203,8 +243,14 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
           sendMessage(worker, { type: "status", value: "error" });
         }
       } else {
-        console.error("[live] could not parse Gemini workout JSON", textSource);
-        sendMessage(worker, { type: "status", value: "error" });
+        console.log("[live] no workout parsed from textSource:", textSource.slice(0, 500) || "(empty)");
+        sendMessage(worker, {
+          type: "result",
+          workout: [],
+          group_ids: [],
+          set_ids: [],
+          transcript,
+        });
       }
     }
   });
@@ -297,6 +343,6 @@ export async function handleLiveWs(_req: Request, env: Env): Promise<Response> {
     } catch {}
   });
 
-  sendMessage(worker, { type: "status", value: "listening" });
+  sendMessage(worker, { type: "status", value: "connected" });
   return new Response(null, { status: 101, webSocket: client });
 }

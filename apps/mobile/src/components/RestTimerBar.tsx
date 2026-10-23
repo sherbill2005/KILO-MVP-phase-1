@@ -4,6 +4,7 @@ import { COLORS } from '../theme/colors';
 import { Timer, Plus, Play, Pause, SkipForward } from 'lucide-react-native';
 import { HapticsService } from '../services/audio/haptics';
 import { SpeechReceiptsService } from '../services/audio/speechReceipts';
+import { TimerNotificationService } from '../services/audio/timerNotification';
 
 interface RestTimerBarProps {
   targetEndTime: number | null;
@@ -41,6 +42,7 @@ export const RestTimerBar: React.FC<RestTimerBarProps> = ({
 
     if (remaining <= 0 && !completedRef.current) {
       completedRef.current = true;
+      TimerNotificationService.cancelTimerAlarm();
       HapticsService.timerAlert();
       SpeechReceiptsService.speakTimerDone();
       onTimerComplete?.();

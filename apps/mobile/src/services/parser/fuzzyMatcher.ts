@@ -41,6 +41,25 @@ export class FuzzyExerciseMatcher {
     }));
   }
 
+  public addCustomExercise(name: string): void {
+    if (!name || !name.trim()) return;
+    const clean = name.trim();
+    const lower = clean.toLowerCase();
+    const existing = this.catalog.find(c => c.canonical.toLowerCase() === lower);
+    if (!existing) {
+      this.catalog.push({
+        canonical: clean,
+        forms: [lower],
+      });
+    }
+  }
+
+  public loadCustomExercises(names: string[]): void {
+    for (const n of names) {
+      this.addCustomExercise(n);
+    }
+  }
+
   public match(rawInput: string): string | null {
     if (!rawInput || !rawInput.trim()) return null;
 

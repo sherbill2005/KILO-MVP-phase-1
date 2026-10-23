@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { CANONICAL_EXERCISES } from '../models/exercises';
 import { DatabaseService } from '../services/storage/database';
@@ -28,39 +28,46 @@ export const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({ onBack }) => {
 
   useEffect(() => {
     const load = async () => {
-      const list = await DatabaseService.getAllSessions();
+      const list = await DatabaseService.getAllSessions(100, 0);
       setSessions(list);
     };
     load();
   }, [dataVersion]);
 
-  // Compute stats for selected exercise
-  let bestWeight = 0;
-  let bestReps = 0;
-  let allSets: { date: string; weight: number; reps: number; est1RM: number }[] = [];
+  // Compute stats for selected exercise (memoized to prevent JS thread freezing)
+  const { bestWeight, bestReps, allSets, brzycki1RM, epley1RM } = useMemo(() => {
+    let bWeight = 0;
+    let bReps = 0;
+    const setsList: { date: string; weight: number; reps: number; est1RM: number }[] = [];
 
-  for (const session of sessions) {
-    for (const group of session.groups) {
-      if (group.exerciseName.toLowerCase() === selectedExercise.toLowerCase()) {
-        for (const set of group.sets) {
-          const est = set.reps <= 1 ? set.weightValue : calculateEpley1RM(set.weightValue, set.reps);
-          allSets.push({
-            date: session.workoutDate,
-            weight: set.weightValue,
-            reps: set.reps,
-            est1RM: est,
-          });
-          if (est > calculateEpley1RM(bestWeight, bestReps)) {
-            bestWeight = set.weightValue;
-            bestReps = set.reps;
+    for (const session of sessions) {
+      for (const group of session.groups) {
+        if (group.exerciseName.toLowerCase() === selectedExercise.toLowerCase()) {
+          for (const set of group.sets) {
+            const est = set.reps <= 1 ? set.weightValue : calculateEpley1RM(set.weightValue, set.reps);
+            setsList.push({
+              date: session.workoutDate,
+              weight: set.weightValue,
+              reps: set.reps,
+              est1RM: est,
+            });
+            if (est > calculateEpley1RM(bWeight, bReps)) {
+              bWeight = set.weightValue;
+              bReps = set.reps;
+            }
           }
         }
       }
     }
-  }
 
-  const brzycki1RM = calculateBrzycki1RM(bestWeight, bestReps);
-  const epley1RM = calculateEpley1RM(bestWeight, bestReps);
+    return {
+      bestWeight: bWeight,
+      bestReps: bReps,
+      allSets: setsList,
+      brzycki1RM: calculateBrzycki1RM(bWeight, bReps),
+      epley1RM: calculateEpley1RM(bWeight, bReps),
+    };
+  }, [sessions, selectedExercise]);
 
   // Muscle Volume Distribution
   const muscleDistribution: Record<string, number> = {

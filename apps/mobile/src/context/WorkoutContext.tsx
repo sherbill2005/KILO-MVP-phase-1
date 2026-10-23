@@ -25,6 +25,9 @@ interface WorkoutContextType {
   updateLastReps: (newReps: number) => void;
   deleteLastSet: () => void;
   getActiveContext: () => ActiveContextState;
+  draftSession: WorkoutSession | null;
+  resumeDraftWorkout: () => void;
+  discardDraftWorkout: () => Promise<void>;
   // Proxied timer helpers for convenience
   isTimerActive: boolean;
   timerTargetEnd: number | null;
@@ -47,6 +50,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   } = useRestTimer();
 
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  const [draftSession, setDraftSession] = useState<WorkoutSession | null>(null);
   const [activeExercise, setActiveExerciseState] = useState<string>('Bench Press');
   const [targetSets, setTargetSets] = useState<number>(4);
   const [defaultUnit, setDefaultUnit] = useState<WeightUnit>('kg');
@@ -60,12 +64,24 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   useEffect(() => {
-    const loadPreferences = async () => {
+    const loadPreferencesAndDraft = async () => {
       const unit = await PreferencesService.getDefaultUnit();
       setDefaultUnit(unit);
+
+      const draft = await DatabaseService.getDraftSession();
+      if (draft && draft.groups && draft.groups.length > 0) {
+        setDraftSession(draft);
+      }
     };
-    loadPreferences();
+    loadPreferencesAndDraft();
   }, []);
+
+  // Write-Ahead Log: Auto-persist active session draft to SQLite whenever modified
+  useEffect(() => {
+    if (activeSession && activeSession.groups.length > 0) {
+      DatabaseService.saveDraftSession(activeSession);
+    }
+  }, [activeSession]);
 
   const startLiveWorkout = useCallback(() => {
     HapticsService.mediumImpact();
@@ -274,14 +290,38 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       HapticsService.setLoggedSuccess();
       SpeechReceiptsService.speakMessage('Workout completed and saved');
     }
+    await DatabaseService.clearDraftSession();
+    setDraftSession(null);
     setActiveSession(null);
     stopRestTimer();
   }, [activeSession, stopRestTimer]);
 
-  const cancelActiveWorkout = useCallback(() => {
+  const cancelActiveWorkout = useCallback(async () => {
+    await DatabaseService.clearDraftSession();
+    setDraftSession(null);
     setActiveSession(null);
     stopRestTimer();
   }, [stopRestTimer]);
+
+  const resumeDraftWorkout = useCallback(() => {
+    if (draftSession) {
+      setActiveSession(draftSession);
+      const lastGroup = draftSession.groups[draftSession.groups.length - 1];
+      if (lastGroup) {
+        setActiveExerciseState(lastGroup.exerciseName);
+      }
+      setDraftSession(null);
+      HapticsService.mediumImpact();
+      SpeechReceiptsService.speakMessage('Resumed workout draft');
+      setLastFeedback('Resumed previous workout draft');
+    }
+  }, [draftSession]);
+
+  const discardDraftWorkout = useCallback(async () => {
+    await DatabaseService.clearDraftSession();
+    setDraftSession(null);
+    HapticsService.lightTap();
+  }, []);
 
   return (
     <WorkoutContext.Provider
@@ -303,6 +343,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateLastReps,
         deleteLastSet,
         getActiveContext,
+        draftSession,
+        resumeDraftWorkout,
+        discardDraftWorkout,
         isTimerActive,
         timerTargetEnd,
         restTimerDuration,
