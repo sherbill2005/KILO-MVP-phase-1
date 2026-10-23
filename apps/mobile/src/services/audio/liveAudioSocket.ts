@@ -1,7 +1,10 @@
 import { CANONICAL_EXERCISES } from '../../models/exercises';
 
-export const WORKER_HOST = 'kilo-worker.sherbill2005.workers.dev';
-export const LIVE_WS_URL = `wss://${WORKER_HOST}/ws/ai/live`;
+const WORKER_API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://kilo-worker.sherbill2005.workers.dev/api';
+const API_KEY = process.env.EXPO_PUBLIC_API_KEY || 'default-api-key';
+
+export const WORKER_HOST = WORKER_API_BASE.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+export const LIVE_WS_URL = `wss://${WORKER_HOST}/ws/ai/live?token=${API_KEY}`;
 
 export interface LiveAudioParseResult {
   ok: boolean;

@@ -4,7 +4,7 @@ import type {
   WorkoutSession,
   WorkoutSet,
 } from "../../../../packages/shared/types/workoutModel";
-import { validateBatchPayload } from "../validation.js";
+import { BatchPayloadSchema } from "../validation";
 
 export async function logWorkout(
   env: Env,
@@ -30,9 +30,9 @@ export async function logWorkout(
       })),
     };
 
-    const validation = validateBatchPayload(batch);
-    if (!validation.ok) {
-      throw new Error(validation.message || "Invalid batch payload");
+    const parsed = BatchPayloadSchema.safeParse(batch);
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0].message);
     }
 
     const group_id = crypto.randomUUID();

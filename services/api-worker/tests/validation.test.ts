@@ -1,52 +1,50 @@
 import { describe, it, expect } from "vitest";
-import { validateBatchPayload } from "../src/validation";
+import { BatchPayloadSchema } from "../src/validation";
 
-describe("validateBatchPayload", () => {
+describe("BatchPayloadSchema", () => {
   it("rejects missing exercise_name", () => {
-    const result = validateBatchPayload({
+    const result = BatchPayloadSchema.safeParse({
       sets: [{ weight_value: 100, weight_unit: "kg", reps: 10 }],
     });
-    expect(result.ok).toBe(false);
-    expect(result.message).toContain("exercise_name is required");
+    expect(result.success).toBe(false);
   });
 
   it("rejects empty sets array", () => {
-    const result = validateBatchPayload({
+    const result = BatchPayloadSchema.safeParse({
       exercise_name: "Squat",
       sets: [],
     });
-    expect(result.ok).toBe(false);
-    expect(result.message).toContain("sets is required");
+    expect(result.success).toBe(false);
   });
 
   it("rejects invalid weight or reps", () => {
-    const invalidWeight = validateBatchPayload({
+    const invalidWeight = BatchPayloadSchema.safeParse({
       exercise_name: "Bench Press",
       sets: [{ weight_value: -5, weight_unit: "kg", reps: 10 }],
     });
-    expect(invalidWeight.ok).toBe(false);
+    expect(invalidWeight.success).toBe(false);
 
-    const invalidUnit = validateBatchPayload({
+    const invalidUnit = BatchPayloadSchema.safeParse({
       exercise_name: "Bench Press",
       sets: [{ weight_value: 100, weight_unit: "stone" as any, reps: 10 }],
     });
-    expect(invalidUnit.ok).toBe(false);
+    expect(invalidUnit.success).toBe(false);
 
-    const invalidReps = validateBatchPayload({
+    const invalidReps = BatchPayloadSchema.safeParse({
       exercise_name: "Bench Press",
       sets: [{ weight_value: 100, weight_unit: "kg", reps: 0 }],
     });
-    expect(invalidReps.ok).toBe(false);
+    expect(invalidReps.success).toBe(false);
   });
 
   it("accepts valid batch payload", () => {
-    const result = validateBatchPayload({
+    const result = BatchPayloadSchema.safeParse({
       exercise_name: "Squat",
       sets: [
         { weight_value: 100, weight_unit: "kg", reps: 10 },
         { weight_value: 100, weight_unit: "kg", reps: 8 },
       ],
     });
-    expect(result.ok).toBe(true);
+    expect(result.success).toBe(true);
   });
 });
