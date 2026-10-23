@@ -1,7 +1,8 @@
 import { DatabaseService } from './database';
 import { WorkoutSession } from '../../models/workout';
 
-const WORKER_API_BASE = 'https://kilo-worker.sherbill2005.workers.dev/api';
+const WORKER_API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://kilo-worker.sherbill2005.workers.dev/api';
+const API_KEY = process.env.EXPO_PUBLIC_API_KEY || 'default-api-key';
 
 export interface SyncStatusResult {
   syncedCount: number;
@@ -28,7 +29,10 @@ export const SyncService = {
           // 1. Create remote session
           const sessRes = await fetch(`${WORKER_API_BASE}/sessions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${API_KEY}`,
+            },
             body: JSON.stringify({
               user_id: session.userId || 'usr_local',
               workout_date: session.workoutDate,
@@ -48,7 +52,10 @@ export const SyncService = {
             if (group.sets.length > 0) {
               await fetch(`${WORKER_API_BASE}/sessions/${remoteSessionId}/sets`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${API_KEY}`,
+                },
                 body: JSON.stringify({
                   exercise_name: group.exerciseName,
                   sets: group.sets.map(s => ({
