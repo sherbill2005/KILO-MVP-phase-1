@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { ContextualWorkoutParser } from "../contextualParser";
 import { FuzzyExerciseMatcher } from "../fuzzyMatcher";
+import {
+  applyUpdateSetById,
+  applyDeleteSetById,
+  WorkoutGroup,
+} from "../../../models/workout";
+import { getWorkerHeaders, WORKER_HOST } from "../../../config/api";
 
 describe("FuzzyExerciseMatcher", () => {
   const matcher = new FuzzyExerciseMatcher();
@@ -27,6 +33,19 @@ describe("FuzzyExerciseMatcher", () => {
   it("returns null for non-exercise speech", () => {
     expect(matcher.match("drinking coffee")).toBeNull();
     expect(matcher.match("what is the time")).toBeNull();
+  });
+
+  it("registers and matches custom exercises via addCustomExercise and loadCustomExercises", () => {
+    const customMatcher = new FuzzyExerciseMatcher();
+    expect(customMatcher.match("zottman twist")).toBeNull();
+
+    customMatcher.addCustomExercise("Zottman Twist");
+    expect(customMatcher.match("zottman twist")).toBe("Zottman Twist");
+    expect(customMatcher.match("zottman twst")).toBe("Zottman Twist");
+
+    customMatcher.loadCustomExercises(["Viking Press", "Nordic Glute Ham"]);
+    expect(customMatcher.match("viking press")).toBe("Viking Press");
+    expect(customMatcher.match("nordic glute ham")).toBe("Nordic Glute Ham");
   });
 });
 
@@ -131,5 +150,91 @@ describe("ContextualWorkoutParser", () => {
     expect(batch[1].exercise).toBe("Squat");
     expect(batch[1].sets.length).toBe(1);
     expect(batch[1].sets[0]).toEqual({ weight: 100, reps: 5, unit: "kg" });
+  });
+});
+
+describe("Targeted Set CRUD (applyUpdateSetById & applyDeleteSetById)", () => {
+  const sampleGroups: WorkoutGroup[] = [
+    {
+      id: "grp_1",
+      sessionId: "sess_1",
+      exerciseName: "Bench Press",
+      createdAt: 1000,
+      sets: [
+        {
+          id: "set_1",
+          groupId: "grp_1",
+          sessionId: "sess_1",
+          setIndex: 1,
+          exerciseName: "Bench Press",
+          weightValue: 80,
+          weightUnit: "kg",
+          reps: 10,
+          createdAt: 1001,
+        },
+        {
+          id: "set_2",
+          groupId: "grp_1",
+          sessionId: "sess_1",
+          setIndex: 2,
+          exerciseName: "Bench Press",
+          weightValue: 85,
+          weightUnit: "kg",
+          reps: 8,
+          createdAt: 1002,
+        },
+      ],
+    },
+    {
+      id: "grp_2",
+      sessionId: "sess_1",
+      exerciseName: "Squat",
+      createdAt: 2000,
+      sets: [
+        {
+          id: "set_3",
+          groupId: "grp_2",
+          sessionId: "sess_1",
+          setIndex: 1,
+          exerciseName: "Squat",
+          weightValue: 120,
+          weightUnit: "kg",
+          reps: 5,
+          createdAt: 2001,
+        },
+      ],
+    },
+  ];
+
+  it("updates only the targeted setId without mutating the last set", () => {
+    const updated = applyUpdateSetById(sampleGroups, "set_1", 82.5, 12);
+    expect(updated[0].sets[0].weightValue).toBe(82.5);
+    expect(updated[0].sets[0].reps).toBe(12);
+    expect(updated[0].sets[0].isCorrected).toBe(true);
+    // Ensure set_2 and set_3 are untouched
+    expect(updated[0].sets[1].weightValue).toBe(85);
+    expect(updated[0].sets[1].reps).toBe(8);
+    expect(updated[1].sets[0].weightValue).toBe(120);
+  });
+
+  it("deletes only the targeted setId, re-indexes remaining sets, and removes empty groups", () => {
+    const afterFirstDelete = applyDeleteSetById(sampleGroups, "set_1");
+    expect(afterFirstDelete.length).toBe(2);
+    expect(afterFirstDelete[0].sets.length).toBe(1);
+    expect(afterFirstDelete[0].sets[0].id).toBe("set_2");
+    expect(afterFirstDelete[0].sets[0].setIndex).toBe(1);
+
+    // Deleting the only set in grp_2 removes grp_2 altogether
+    const afterSecondDelete = applyDeleteSetById(afterFirstDelete, "set_3");
+    expect(afterSecondDelete.length).toBe(1);
+    expect(afterSecondDelete[0].id).toBe("grp_1");
+  });
+});
+
+describe("API Config & Auth Headers (getWorkerHeaders)", () => {
+  it("builds headers with extra headers and valid WORKER_HOST", () => {
+    expect(WORKER_HOST).toContain("workers.dev");
+    const headers = getWorkerHeaders({ "Content-Type": "application/json" });
+    expect(headers["Content-Type"]).toBe("application/json");
   });
 });

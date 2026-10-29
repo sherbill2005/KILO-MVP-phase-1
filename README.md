@@ -9,44 +9,45 @@ Kilo is a high-performance, voice-first workout tracking application designed fo
 ```
 Kilo/
 ├── apps/
-│   ├── mobile/         → Production mobile app (Expo SDK 57 / React Native / TypeScript)
+│   ├── mobile/         → Production mobile app (Expo SDK 57 / React Native 0.86 / TypeScript)
 │   │   ├── src/
-│   │   │   ├── components/     5 reusable UI components
-│   │   │   ├── context/        WorkoutContext + RestTimerContext
-│   │   │   ├── models/         32-exercise taxonomy + workout types + 1RM formulas
+│   │   │   ├── components/     5 reusable UI components (FAB, GroupedSetTable, RestTimerBar, etc.)
+│   │   │   ├── config/         Central Worker API & WebSocket URL configuration
+│   │   │   ├── context/        WorkoutContext (WAL draft recovery) + RestTimerContext
+│   │   │   ├── models/         32-exercise taxonomy + workout types + Brzycki/Epley 1RM formulas
 │   │   │   ├── navigation/     State-based RootNavigator (6 screens)
 │   │   │   ├── screens/        Home, Live, Batch, Analytics, Settings, Welcome
 │   │   │   ├── services/
-│   │   │   │   ├── audio/      16kHz PCM recording, WebSocket client, haptics, TTS
-│   │   │   │   ├── parser/     Fuzzy exercise matcher + contextual voice parser
-│   │   │   │   └── storage/    expo-sqlite DB, AsyncStorage prefs, sync service
+│   │   │   │   ├── audio/      Pre-warmed .m4a capture, AI audio client, Live WS client, haptics, TTS
+│   │   │   │   ├── parser/     Fuzzy exercise matcher + contextual & batch voice parser
+│   │   │   │   └── storage/    expo-sqlite DB (v1/v2 migrations), AsyncStorage prefs, batch sync
 │   │   │   └── theme/          OLED Gym Dark color tokens
 │   │   └── tests via vitest
 │   └── pwa/            → Web PWA prototype (Phase 1 artifact)
 ├── services/
-│   └── api-worker/     → Cloudflare Worker + Gemini Live WebSocket proxy
+│   └── api-worker/     → Cloudflare Worker REST API + Gemini AI / Live WebSocket proxy
 │       ├── src/
-│       │   ├── index.ts        REST API router (sessions, sets, corrections)
+│       │   ├── index.ts        REST API router (health, parse-audio, sync-batch, sessions, sets)
 │       │   ├── validation.ts   Batch payload validation
-│       │   └── live/           Gemini Live WebSocket proxy + persistence
-│       └── tests/              Vitest unit tests
+│       │   └── live/           Gemini Live WebSocket proxy + KV persistence
+│       └── tests/              Vitest unit & route integration tests
 ├── packages/
 │   └── shared/         → Shared TypeScript types (server-side workout model)
-└── Documentation/      → Master specs: Product & Architecture, UI Design, Phase 2 Roadmap
+└── Documentation/      → Consolidated product, architecture, mobile testing, UI, and marketing docs
 ```
 
 ---
 
 ## ✨ Key Features (All Implemented)
 
-- 🎙️ **Push-to-Talk voice logging** via Gemini Live AI streaming
+- 🎙️ **Push-to-Talk voice logging** via Cloudflare Worker Gemini AI (`POST /api/ai/parse-audio` & `/ws/ai/live`)
 - 🧠 **Smart contextual parser** — *"90 for 8"*, *"same weight, same reps"*, voice CRUD
-- 🔍 **Fuzzy exercise matcher** — 32 exercises with aliases, Levenshtein + token overlap
-- ⏱️ **Auto 60s rest timer** with +30s / skip controls
+- 🔍 **Fuzzy exercise matcher** — 32 canonical exercises with aliases + custom exercises, Levenshtein + token overlap
+- ⏱️ **Auto 60s rest timer** with background notification alarms + `+30s` / skip controls
 - 📳 **Haptic receipts** — success, delete, timer alerts
-- 🔊 **TTS earbud receipts** — *"80 kilos, 10 reps"* (toggle-able)
-- 💾 **100% offline-first** — expo-sqlite on device, AsyncStorage fallback
-- ☁️ **Background sync** to Cloudflare Worker KV
+- 🔊 **TTS earbud receipts** — *"Bench Press, 80 kilos, 10 reps"* (toggle-able)
+- 💾 **100% offline-first** — `expo-sqlite` on device with WAL active-draft crash recovery & `AsyncStorage` fallback
+- ☁️ **Atomic background sync** to Cloudflare Worker KV (`POST /api/workouts/sync-batch`)
 - 📊 **Analytics** — 1RM estimation (Brzycki + Epley), volume by muscle group
 - 🎨 **OLED Gym Dark theme** — `#0B0E14`, Cyan `#00E5FF`, Volt Lime `#D4FF00`
 
@@ -54,12 +55,10 @@ Kilo/
 
 ## 📱 Quick Start: Mobile App (Expo Go)
 
-You do **not** need Android Studio or heavy virtual emulators.
-
 ```bash
 cd apps/mobile
 npm install
-npm start
+npx expo start --tunnel
 ```
 
 1. Install **Expo Go** on your Android or iPhone.
@@ -83,19 +82,16 @@ npx wrangler dev
 ## 🧪 Running Tests
 
 ```bash
-# All tests from root
-npm test
-
-# Worker validation tests only
+# Worker validation & route tests (16 tests)
 npm run worker:test
 
-# Mobile parser + fuzzy matcher tests only
+# Mobile parser + fuzzy matcher tests (13 tests)
 npm run mobile:test
 ```
 
-**Current test status**: 17 tests, all passing ✅
-- Worker: 4 validation tests
-- Mobile: 13 parser + fuzzy matcher tests
+**Current test status**: 29 tests, all passing ✅
+- Worker: 16 tests (`validation.test.ts` [4] + `routes.test.ts` [12])
+- Mobile: 13 tests (`parser.test.ts` [13])
 
 ---
 
@@ -106,8 +102,13 @@ npm run mobile:test
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | `GET` | `/health` or `/` | Health check (KV, Gemini key, model) |
+| `POST` | `/api/ai/parse-audio` | Parse base64 `.m4a` voice clip via Gemini & persist sets |
+| `POST` | `/api/workouts/sync-batch` | Atomic single-request sync for a full `WorkoutSession` |
 | `POST` | `/api/sessions` | Create workout session |
+| `GET` | `/api/sessions` | List workout sessions (optional `?user_id=`) |
+| `GET` | `/api/sessions/:id` | Get hydrated workout session (with groups & sets) |
 | `POST` | `/api/sessions/:id/sets` | Log single or batch sets |
+| `POST` | `/api/sessions/:id/finish` | Mark workout session as finished |
 | `PATCH` | `/api/sets/:id` | Update/correct a set |
 | `OPTIONS` | `*` | CORS preflight |
 
@@ -119,30 +120,21 @@ npm run mobile:test
 | Client → Worker | `context` | Send exercise vocabulary |
 | Client → Worker | `audio` | Stream base64 PCM16 16kHz audio |
 | Client → Worker | `stop` | End speech / trigger Gemini response |
-| Worker → Client | `status` | `listening` / `processing` / `error` |
+| Worker → Client | `status` | `connected` / `listening` / `processing` / `error` |
 | Worker → Client | `result` | Parsed workout JSON + KV IDs + transcript |
 
 ---
 
-## 🎨 Design System & UI Specs
-
-See [UI_DESIGN_SPECIFICATION.md](Documentation/UI_DESIGN_SPECIFICATION.md) for the complete design system including:
-- Color tokens (OLED Gym Dark theme)
-- Typography specs (Inter / Plus Jakarta Sans)
-- Screen-by-screen layout prompts
-- Component specifications
-
----
-
-## 📋 Documentation Index
+## 📋 Consolidated Documentation (`Documentation/`)
 
 | Document | Description |
 |----------|-------------|
-| [PRODUCT_AND_ARCHITECTURE.md](Documentation/PRODUCT_AND_ARCHITECTURE.md) | Full PRD, database schema, API spec |
-| [UI_DESIGN_SPECIFICATION.md](Documentation/UI_DESIGN_SPECIFICATION.md) | Design system, color palette, screen prompts |
-| [PHASE_1_WEB_MVP.md](Documentation/PHASE_1_WEB_MVP.md) | Web PWA + Gemini Live pipeline details |
-| [PHASE_2_ANDROID_NATIVE.md](Documentation/PHASE_2_ANDROID_NATIVE.md) | Native Kotlin/Compose production plan |
-| [USER_PREREQUISITES_CHECKLIST.md](Documentation/USER_PREREQUISITES_CHECKLIST.md) | External credentials & setup tracker |
+| [PRODUCT_AND_ARCHITECTURE.md](Documentation/PRODUCT_AND_ARCHITECTURE.md) | Master PRD, SQLite & KV schemas, full REST + WebSocket API spec |
+| [MOBILE_APP_ARCHITECTURE_AND_TESTING.md](Documentation/MOBILE_APP_ARCHITECTURE_AND_TESTING.md) | Expo SDK 57 mobile architecture, frontend-backend connections, testing & EAS build guide |
+| [UI_DESIGN_SPECIFICATION.md](Documentation/UI_DESIGN_SPECIFICATION.md) | Design system, OLED Gym Dark color palette, screen-by-screen specs |
+| [PHASE_1_WEB_MVP.md](Documentation/PHASE_1_WEB_MVP.md) | Phase 1 Web PWA & Gemini Live WebSocket pipeline reference |
+| [MARKETING_AND_POSITIONING.md](Documentation/MARKETING_AND_POSITIONING.md) | Brand positioning, founder story, waitlist & investor copy guide |
+| [stitch_style_and_concept_explorer/](Documentation/stitch_style_and_concept_explorer/) | UI concept HTML/PNG mockups & Obsidian Kinetic design tokens |
 
 ---
 
@@ -152,4 +144,4 @@ See [UI_DESIGN_SPECIFICATION.md](Documentation/UI_DESIGN_SPECIFICATION.md) for t
 - Keep data persistence **offline-first** with `expo-sqlite`
 - Maintain the OLED Gym Dark theme (`#0B0E14`, Cyan `#00E5FF`, Volt Lime `#D4FF00`)
 - Use `credentials.txt` for reference keys and `.dev.vars` for local worker execution
-- Run `npm test` before pushing — all 29 tests (16 worker + 13 mobile) must pass
+- Run `npm run worker:test` and `npm run mobile:test` before pushing — all 29 tests (16 worker + 13 mobile) must pass

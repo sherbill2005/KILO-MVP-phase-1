@@ -1,6 +1,6 @@
 # Kilo Mobile: UI/UX Design System & AI Prompt Specification
 
-**Document Purpose:** Feed this specification directly into AI UI makers (e.g. Galileo AI, v0, Uizard, Claude, Figma AI) to generate production-ready UI mockups, design tokens, and wireframes for **Kilo Mobile (Android)**.
+**Document Purpose:** Feed this specification directly into AI UI makers (e.g. Galileo AI, v0, Uizard, Claude, Figma AI) to generate production-ready UI mockups, design tokens, and wireframes for **Kilo Mobile (Expo / React Native — iOS & Android)**.
 
 ---
 
@@ -128,7 +128,7 @@
 ### Screen 6: Settings & Audio Preferences Screen
 
 **AI Prompt Description:**
-> "Design a clean settings screen in dark mode with grouped list tiles. Group 1: 'Audio & Feedback' featuring a switch toggle 'Earbud Audio Receipts (TTS)' with subtext 'Hear snappy voice confirmations in headphones', and an Audio Volume slider. Group 2: 'Workout Defaults' with a selector for Default Unit ('kg' / 'lb') and Rest Timer default slider (60s). Group 3: 'Data & Sync' showing Cloudflare D1 Sync status '100% Offline Capable - 0 Pending Synced' and a 'Sync Now' button."
+> "Design a clean settings screen in dark mode with grouped list tiles. Group 1: 'Audio & Feedback' featuring a switch toggle 'Earbud Audio Receipts (TTS)' with subtext 'Hear snappy voice confirmations in headphones', and an Audio Volume slider. Group 2: 'Workout Defaults' with a selector for Default Unit ('kg' / 'lb') and Rest Timer default slider (60s). Group 3: 'Data & Sync' showing Cloudflare Worker KV Sync status '100% Offline Capable - 0 Pending Synced' and a 'Sync Now' button."
 
 **Key UI Elements:**
 1. **Earbud Voice Receipts Toggle:** `[ON / OFF]` switch with headphone icon.

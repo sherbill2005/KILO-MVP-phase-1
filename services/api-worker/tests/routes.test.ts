@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import worker from "../src/index";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import worker, { timingSafeTokenEqual, getCorsHeaders } from "../src/index";
 import type { Env } from "../src/env";
 
 const parseJson = async <T = any>(res: Response): Promise<T> => (await res.json()) as T;
@@ -37,12 +37,16 @@ describe("Cloudflare Worker API Routes", () => {
     env = {
       KILO_KV: createMockKV(),
       GEMINI_API_KEY: "fake_gemini_key",
-      GEMINI_MODEL: "gemini-2.5-flash-native-audio-preview-12-2025",
+      GEMINI_MODEL: "gemini-3-flash-preview",
     };
   });
 
-  describe("CORS & Health", () => {
-    it("responds to OPTIONS preflight with CORS headers", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("CORS & Health (Fix 3)", () => {
+    it("responds to OPTIONS preflight with CORS headers including authorization", async () => {
       const req = new Request("http://localhost/api/sessions", {
         method: "OPTIONS",
       });
@@ -50,6 +54,36 @@ describe("Cloudflare Worker API Routes", () => {
       expect(res.status).toBe(204);
       expect(res.headers.get("access-control-allow-origin")).toBe("*");
       expect(res.headers.get("access-control-allow-methods")).toContain("POST");
+      expect(res.headers.get("access-control-allow-headers")).toContain("authorization");
+    });
+
+    it("enforces ALLOWED_ORIGINS for browser Origin headers while allowing native mobile (no Origin)", () => {
+      const restrictedEnv: Env = {
+        ...env,
+        ALLOWED_ORIGINS: "https://app.kilo.fit, https://kilo.fit",
+      };
+
+      // Allowed browser origin
+      const allowedReq = new Request("http://localhost/api/sessions", {
+        headers: { Origin: "https://app.kilo.fit" },
+      });
+      expect(getCorsHeaders(allowedReq, restrictedEnv)["access-control-allow-origin"]).toBe(
+        "https://app.kilo.fit"
+      );
+
+      // Disallowed browser origin
+      const blockedReq = new Request("http://localhost/api/sessions", {
+        headers: { Origin: "https://evil.example.com" },
+      });
+      expect(getCorsHeaders(blockedReq, restrictedEnv)["access-control-allow-origin"]).toBe(
+        "null"
+      );
+
+      // Native mobile client (no Origin header)
+      const mobileReq = new Request("http://localhost/api/sessions");
+      expect(getCorsHeaders(mobileReq, restrictedEnv)["access-control-allow-origin"]).toBe(
+        "*"
+      );
     });
 
     it("returns healthy status on /health", async () => {
@@ -65,7 +99,72 @@ describe("Cloudflare Worker API Routes", () => {
     });
   });
 
-  describe("Workout Sessions", () => {
+  describe("Optional Timing-Safe API Key Authentication (Fix 1)", () => {
+    it("compares tokens in constant time via timingSafeTokenEqual", async () => {
+      expect(await timingSafeTokenEqual("secret-123", "secret-123")).toBe(true);
+      expect(await timingSafeTokenEqual("secret-123", "secret-124")).toBe(false);
+      expect(await timingSafeTokenEqual("secret-123", "short")).toBe(false);
+    });
+
+    it("enforces KILO_API_KEY when configured while keeping /health public", async () => {
+      const securedEnv: Env = {
+        ...env,
+        KILO_API_KEY: "kilo_prod_secret_token",
+      };
+
+      // 1. /health remains public without auth header
+      const healthRes = await worker.fetch(new Request("http://localhost/health"), securedEnv);
+      expect(healthRes.status).toBe(200);
+
+      // 2. Protected route without token -> 401
+      const unauthRes = await worker.fetch(
+        new Request("http://localhost/api/sessions"),
+        securedEnv
+      );
+      expect(unauthRes.status).toBe(401);
+      const unauthJson = await parseJson(unauthRes);
+      expect(unauthJson.error.code).toBe("UNAUTHORIZED");
+
+      // 3. Protected route with wrong Bearer token -> 401
+      const wrongRes = await worker.fetch(
+        new Request("http://localhost/api/sessions", {
+          headers: { Authorization: "Bearer wrong_token" },
+        }),
+        securedEnv
+      );
+      expect(wrongRes.status).toBe(401);
+
+      // 4. Protected route with valid Bearer token -> 200
+      const validBearerRes = await worker.fetch(
+        new Request("http://localhost/api/sessions", {
+          headers: { Authorization: "Bearer kilo_prod_secret_token" },
+        }),
+        securedEnv
+      );
+      expect(validBearerRes.status).toBe(200);
+
+      // 5. Protected route with valid ?token= query param -> 200
+      const validQueryRes = await worker.fetch(
+        new Request("http://localhost/api/sessions?token=kilo_prod_secret_token"),
+        securedEnv
+      );
+      expect(validQueryRes.status).toBe(200);
+    });
+  });
+
+  describe("Workout Sessions & Malformed JSON Handling (Fix 2)", () => {
+    it("rejects malformed JSON bodies with 400 BAD_REQUEST instead of 500", async () => {
+      const badJsonReq = new Request("http://localhost/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ invalid json",
+      });
+      const res = await worker.fetch(badJsonReq, env);
+      expect(res.status).toBe(400);
+      const data = await parseJson(res);
+      expect(data.error.code).toBe("BAD_REQUEST");
+    });
+
     it("validates session creation payload", async () => {
       const invalidUser = new Request("http://localhost/api/sessions", {
         method: "POST",
@@ -110,7 +209,6 @@ describe("Cloudflare Worker API Routes", () => {
     });
 
     it("lists sessions and filters by user_id", async () => {
-      // Create session for user A
       await worker.fetch(
         new Request("http://localhost/api/sessions", {
           method: "POST",
@@ -119,7 +217,6 @@ describe("Cloudflare Worker API Routes", () => {
         }),
         env
       );
-      // Create session for user B
       await worker.fetch(
         new Request("http://localhost/api/sessions", {
           method: "POST",
@@ -129,7 +226,6 @@ describe("Cloudflare Worker API Routes", () => {
         env
       );
 
-      // List all
       const listAll = await worker.fetch(
         new Request("http://localhost/api/sessions"),
         env
@@ -137,7 +233,6 @@ describe("Cloudflare Worker API Routes", () => {
       const allData = await parseJson(listAll);
       expect(allData.sessions.length).toBe(2);
 
-      // List filtered by user_a
       const listFiltered = await worker.fetch(
         new Request("http://localhost/api/sessions?user_id=user_a"),
         env
@@ -156,7 +251,7 @@ describe("Cloudflare Worker API Routes", () => {
     });
   });
 
-  describe("Workout Sets & Groups", () => {
+  describe("Workout Sets, Groups & Atomic Batch Sync", () => {
     let sessionId: string;
 
     beforeEach(async () => {
@@ -218,7 +313,6 @@ describe("Cloudflare Worker API Routes", () => {
       expect(batchData.group_id).toBeTruthy();
       expect(batchData.set_ids.length).toBe(3);
 
-      // Verify hydrated session
       const getRes = await worker.fetch(
         new Request(`http://localhost/api/sessions/${sessionId}`),
         env
@@ -232,8 +326,7 @@ describe("Cloudflare Worker API Routes", () => {
       expect(session.sets[2].weight_value).toBe(110);
     });
 
-    it("patches and corrects an existing set", async () => {
-      // Add a set
+    it("patches and corrects an existing set and rejects empty patch bodies", async () => {
       const addRes = await worker.fetch(
         new Request(`http://localhost/api/sessions/${sessionId}/sets`, {
           method: "POST",
@@ -249,7 +342,18 @@ describe("Cloudflare Worker API Routes", () => {
       );
       const { set_id } = await parseJson(addRes);
 
-      // Patch the set (user corrected reps from 10 to 12)
+      // Empty patch body -> 400
+      const emptyPatchRes = await worker.fetch(
+        new Request(`http://localhost/api/sets/${set_id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }),
+        env
+      );
+      expect(emptyPatchRes.status).toBe(400);
+
+      // Valid patch
       const patchReq = new Request(`http://localhost/api/sets/${set_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -260,7 +364,6 @@ describe("Cloudflare Worker API Routes", () => {
       const patchData = await parseJson(patchRes);
       expect(patchData.ok).toBe(true);
 
-      // Check hydrated session has corrected flag and updated values
       const getRes = await worker.fetch(
         new Request(`http://localhost/api/sessions/${sessionId}`),
         env
@@ -271,11 +374,105 @@ describe("Cloudflare Worker API Routes", () => {
       expect(updatedSet.weight_value).toBe(32);
       expect(updatedSet.corrected).toBe(true);
     });
+
+    it("atomically syncs an entire mobile workout session via /api/workouts/sync-batch", async () => {
+      const syncReq = new Request("http://localhost/api/workouts/sync-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session: {
+            id: "live_mobile_sync_1",
+            userId: "usr_local",
+            workoutDate: "2026-10-28",
+            startedAt: 1774200000000,
+            finishedAt: 1774203600000,
+            mode: "LIVE",
+            groups: [
+              {
+                id: "grp_m1",
+                exerciseName: "Bench Press",
+                sets: [
+                  { id: "set_m1", weightValue: 85, weightUnit: "kg", reps: 8 },
+                  { id: "set_m2", weightValue: 90, weightUnit: "kg", reps: 6 },
+                ],
+              },
+            ],
+          },
+        }),
+      });
+      const syncRes = await worker.fetch(syncReq, env);
+      expect(syncRes.status).toBe(200);
+      const syncData = await parseJson(syncRes);
+      expect(syncData).toEqual({
+        ok: true,
+        session_id: "live_mobile_sync_1",
+        set_count: 2,
+      });
+
+      const hydratedRes = await worker.fetch(
+        new Request("http://localhost/api/sessions/live_mobile_sync_1"),
+        env
+      );
+      const hydrated = await parseJson(hydratedRes);
+      expect(hydrated.groups.length).toBe(1);
+      expect(hydrated.sets.length).toBe(2);
+    });
+  });
+
+  describe("AI Audio Parse Endpoint (/api/ai/parse-audio — Fix 4)", () => {
+    it("parses audio via Gemini Flash model and persists extracted sets to KV", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: JSON.stringify({
+                        transcript: "Bench press 80 kg for 10 reps",
+                        workout: [
+                          {
+                            exercise: "Bench Press",
+                            sets: [{ weight: 80, unit: "kg", reps: 10 }],
+                          },
+                        ],
+                      }),
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+
+      const parseReq = new Request("http://localhost/api/ai/parse-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio_base64: "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwH/////////",
+          mime_type: "audio/mp4",
+          exercises: ["Bench Press", "Squat"],
+          session_id: "live_audio_test_1",
+        }),
+      });
+
+      const res = await worker.fetch(parseReq, env);
+      expect(res.status).toBe(200);
+      const data = await parseJson(res);
+      expect(data.ok).toBe(true);
+      expect(data.transcript).toBe("Bench press 80 kg for 10 reps");
+      expect(data.workout.length).toBe(1);
+      expect(data.set_ids.length).toBe(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(String(fetchSpy.mock.calls[0][0])).toContain("gemini-3-flash-preview:generateContent");
+    });
   });
 
   describe("Finish Session", () => {
     it("finishes an active session with timestamp", async () => {
-      // 1. Create session
       const createRes = await worker.fetch(
         new Request("http://localhost/api/sessions", {
           method: "POST",
@@ -289,7 +486,6 @@ describe("Cloudflare Worker API Routes", () => {
       );
       const { session_id } = await parseJson(createRes);
 
-      // 2. Finish session
       const customTimestamp = "2026-10-21T18:45:00.000Z";
       const finishReq = new Request(
         `http://localhost/api/sessions/${session_id}/finish`,
@@ -305,7 +501,6 @@ describe("Cloudflare Worker API Routes", () => {
       expect(finishData.ok).toBe(true);
       expect(finishData.finished_at).toBe(customTimestamp);
 
-      // 3. Verify session retrieval reflects finished state
       const getRes = await worker.fetch(
         new Request(`http://localhost/api/sessions/${session_id}`),
         env

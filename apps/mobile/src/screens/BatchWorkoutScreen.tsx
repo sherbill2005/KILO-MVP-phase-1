@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { GroupedSetTable } from '../components/GroupedSetTable';
 import { PushToTalkFab, StructuredWorkoutItem } from '../components/PushToTalkFab';

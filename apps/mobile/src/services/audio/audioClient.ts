@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
-import { File, Directory, Paths } from 'expo-file-system';
 import { AudioSessionManager } from './audioSessionManager';
-import { WORKER_BASE_URL } from '../../config/api';
+import { WORKER_BASE_URL, getWorkerHeaders } from '../../config/api';
 
 export interface AudioParseResponse {
   ok: boolean;
@@ -32,8 +31,10 @@ export const AudioClient = {
 
       // Immediately delete recorded audio from device disk to prevent cache accumulation
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { File } = require('expo-file-system');
         const file = new File(audioUri);
-        if (file.exists) {
+        if (file && file.exists) {
           file.delete();
         }
       } catch (delErr) {
@@ -51,7 +52,7 @@ export const AudioClient = {
       try {
         const response = await fetch(`${WORKER_BASE_URL}/api/ai/parse-audio`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getWorkerHeaders({ 'Content-Type': 'application/json' }),
           signal: controller.signal,
           body: JSON.stringify({
             audio_base64: audioBase64,
@@ -92,18 +93,22 @@ export const AudioClient = {
   cleanStaleAudioCache: async (): Promise<void> => {
     if (Platform.OS === 'web') return;
     try {
-      const audioDir = new Directory(Paths.cache, 'Audio');
-      if (audioDir.exists) {
-        const entries = audioDir.list();
-        let count = 0;
-        for (const entry of entries) {
-          try {
-            entry.delete();
-            count++;
-          } catch {}
-        }
-        if (count > 0) {
-          console.log(`[AudioClient] Cleaned ${count} stale audio files from cache.`);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { Directory, Paths } = require('expo-file-system');
+      if (Paths && Paths.cache && Directory) {
+        const audioDir = new Directory(Paths.cache, 'Audio');
+        if (audioDir && audioDir.exists) {
+          const entries = audioDir.list();
+          let count = 0;
+          for (const entry of entries) {
+            try {
+              entry.delete();
+              count++;
+            } catch {}
+          }
+          if (count > 0) {
+            console.log(`[AudioClient] Cleaned ${count} stale audio files from cache.`);
+          }
         }
       }
     } catch (e) {
@@ -111,5 +116,3 @@ export const AudioClient = {
     }
   },
 };
-
-

@@ -8,7 +8,6 @@ import {
   type RecordingOptions,
 } from 'expo-audio';
 import { Platform, AppState, type AppStateStatus } from 'react-native';
-import { File } from 'expo-file-system';
 
 export const VOICE_RECORDING_OPTIONS: RecordingOptions = {
   extension: '.m4a',
@@ -33,8 +32,35 @@ export const VOICE_RECORDING_OPTIONS: RecordingOptions = {
   },
 };
 
-export const PCM_16KHZ_RECORDING_OPTIONS = VOICE_RECORDING_OPTIONS;
-
+/**
+ * True 16kHz 16-bit mono Linear PCM WAV recording configuration
+ * for Gemini Live WebSocket streaming (`LiveAudioSocketService` / `readPcm16Base64`).
+ */
+export const PCM_16KHZ_RECORDING_OPTIONS: RecordingOptions = {
+  extension: '.wav',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 256000,
+  android: {
+    extension: '.wav',
+    outputFormat: 'default',
+    audioEncoder: 'default',
+    sampleRate: 16000,
+  },
+  ios: {
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.MAX,
+    sampleRate: 16000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/wav',
+    bitsPerSecond: 256000,
+  },
+};
 
 export class AudioSessionManager {
   private static isPrewarmed = false;
@@ -94,10 +120,13 @@ export class AudioSessionManager {
   }
 
   /**
-   * Starts a low-latency 16kHz PCM recording using the pre-warmed audio session.
-   * Eliminates the cold-start delay during Push-To-Talk presses.
+   * Starts a low-latency recording using the pre-warmed audio session.
+   * Defaults to `.m4a` (`VOICE_RECORDING_OPTIONS`) for HTTP `/api/ai/parse-audio`,
+   * or accepts `PCM_16KHZ_RECORDING_OPTIONS` for `.wav` WebSocket streaming.
    */
-  public static async startInstantRecording(): Promise<AudioRecorder | null> {
+  public static async startInstantRecording(
+    options: RecordingOptions = VOICE_RECORDING_OPTIONS
+  ): Promise<AudioRecorder | null> {
     if (Platform.OS === 'web') return null;
 
     try {
@@ -106,7 +135,7 @@ export class AudioSessionManager {
         if (!ready) return null;
       }
 
-      const recorder = new AudioModule.AudioRecorder(PCM_16KHZ_RECORDING_OPTIONS);
+      const recorder = new AudioModule.AudioRecorder(options);
       await recorder.prepareToRecordAsync();
       recorder.record();
       this.activeRecorder = recorder;
@@ -148,8 +177,10 @@ export class AudioSessionManager {
       await rec.stop();
       if (rec.uri) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { File } = require('expo-file-system');
           const file = new File(rec.uri);
-          if (file.exists) file.delete();
+          if (file && file.exists) file.delete();
         } catch {}
       }
     } catch (e) {

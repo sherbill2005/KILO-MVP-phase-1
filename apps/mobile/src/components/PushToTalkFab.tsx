@@ -160,6 +160,7 @@ export const PushToTalkFab: React.FC<PushToTalkFabProps> = ({
             }
           } else {
             HapticsService.deleteWarning();
+            setShowTextModal(true);
           }
         }
         setIsProcessing(false);

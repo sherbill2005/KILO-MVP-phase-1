@@ -1,11 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { WorkoutSession, WorkoutGroup, WorkoutSet, WeightUnit } from '../models/workout';
+import {
+  WorkoutSession,
+  WorkoutGroup,
+  WorkoutSet,
+  WeightUnit,
+  applyUpdateSetById,
+  applyDeleteSetById,
+} from '../models/workout';
+import { CANONICAL_EXERCISES } from '../models/exercises';
 import { DatabaseService } from '../services/storage/database';
 import { PreferencesService } from '../services/storage/preferences';
 import { HapticsService } from '../services/audio/haptics';
 import { SpeechReceiptsService } from '../services/audio/speechReceipts';
 import { ActiveContextState } from '../services/parser/contextualParser';
+import { fuzzyExerciseMatcher } from '../services/parser/fuzzyMatcher';
 import { useRestTimer } from './RestTimerContext';
+
+export { applyUpdateSetById, applyDeleteSetById };
 
 interface WorkoutContextType {
   activeSession: WorkoutSession | null;
@@ -21,6 +32,8 @@ interface WorkoutContextType {
   cancelActiveWorkout: () => void;
   setActiveExercise: (exercise: string, targetSets?: number) => void;
   logSet: (exercise: string, weight: number, unit: WeightUnit, reps: number) => void;
+  updateSetById: (setId: string, newWeight: number, newReps: number) => void;
+  deleteSetById: (setId: string) => void;
   updateLastWeight: (newWeight: number) => void;
   updateLastReps: (newReps: number) => void;
   deleteLastSet: () => void;
@@ -65,10 +78,18 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     const loadPreferencesAndDraft = async () => {
-      const unit = await PreferencesService.getDefaultUnit();
+      await DatabaseService.init();
+      const [unit, draft, customExercises] = await Promise.all([
+        PreferencesService.getDefaultUnit(),
+        DatabaseService.getDraftSession(),
+        DatabaseService.getCustomExercises(),
+      ]);
       setDefaultUnit(unit);
 
-      const draft = await DatabaseService.getDraftSession();
+      if (customExercises.length > 0) {
+        fuzzyExerciseMatcher.loadCustomExercises(customExercises);
+      }
+
       if (draft && draft.groups && draft.groups.length > 0) {
         setDraftSession(draft);
       }
@@ -145,6 +166,15 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logSet = useCallback(
     (exercise: string, weight: number, unit: WeightUnit, reps: number) => {
+      // Persist & register custom exercises automatically when not in canonical catalog
+      const isCanonical = CANONICAL_EXERCISES.some(
+        c => c.name.toLowerCase() === exercise.trim().toLowerCase()
+      );
+      if (!isCanonical && exercise.trim()) {
+        fuzzyExerciseMatcher.addCustomExercise(exercise.trim());
+        DatabaseService.saveCustomExercise(exercise.trim());
+      }
+
       setActiveSession(prev => {
         const currentSession = prev || {
           id: 'live_' + Date.now(),
@@ -157,7 +187,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
 
         const newSet: WorkoutSet = {
-          id: 'set_' + Date.now(),
+          id: 'set_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           groupId: '',
           sessionId: currentSession.id,
           setIndex: 1,
@@ -206,6 +236,28 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     },
     [targetSets, startRestTimer]
   );
+
+  const updateSetById = useCallback((setId: string, newWeight: number, newReps: number) => {
+    setActiveSession(prev => {
+      if (!prev) return null;
+      const updatedGroups = applyUpdateSetById(prev.groups, setId, newWeight, newReps);
+      HapticsService.lightTap();
+      SpeechReceiptsService.speakMessage(`Set updated to ${newWeight} for ${newReps} reps`);
+      setLastFeedback(`Updated set to ${newWeight} × ${newReps}`);
+      return { ...prev, groups: updatedGroups };
+    });
+  }, []);
+
+  const deleteSetById = useCallback((setId: string) => {
+    setActiveSession(prev => {
+      if (!prev) return null;
+      const updatedGroups = applyDeleteSetById(prev.groups, setId);
+      HapticsService.deleteWarning();
+      SpeechReceiptsService.speakMessage('Set removed');
+      setLastFeedback('Deleted set');
+      return { ...prev, groups: updatedGroups };
+    });
+  }, []);
 
   const updateLastWeight = useCallback(
     (newWeight: number) => {
@@ -339,6 +391,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         cancelActiveWorkout,
         setActiveExercise,
         logSet,
+        updateSetById,
+        deleteSetById,
         updateLastWeight,
         updateLastReps,
         deleteLastSet,

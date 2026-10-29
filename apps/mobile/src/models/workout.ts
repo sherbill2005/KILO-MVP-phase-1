@@ -66,3 +66,34 @@ export interface SyncQueueItem {
   payloadJson: string;
   createdAt: number;
 }
+
+/**
+ * Pure helper functions for targeted set updates/deletions inside a WorkoutGroup array.
+ */
+export function applyUpdateSetById(
+  groups: WorkoutGroup[],
+  setId: string,
+  newWeight: number,
+  newReps: number
+): WorkoutGroup[] {
+  return groups.map(group => ({
+    ...group,
+    sets: group.sets.map(s =>
+      s.id === setId
+        ? { ...s, weightValue: newWeight, reps: newReps, isCorrected: true }
+        : s
+    ),
+  }));
+}
+
+export function applyDeleteSetById(groups: WorkoutGroup[], setId: string): WorkoutGroup[] {
+  return groups
+    .map(group => {
+      const filtered = group.sets.filter(s => s.id !== setId);
+      return {
+        ...group,
+        sets: filtered.map((s, idx) => ({ ...s, setIndex: idx + 1 })),
+      };
+    })
+    .filter(group => group.sets.length > 0);
+}

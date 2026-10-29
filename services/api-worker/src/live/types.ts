@@ -5,7 +5,7 @@ export type ClientToWorkerMessage =
   | { type: "stop" };
 
 export type WorkerToClientMessage =
-  | { type: "status"; value: "listening" | "processing" | "error" }
+  | { type: "status"; value: "connected" | "listening" | "processing" | "error" }
   | {
       type: "result";
       workout: unknown[];

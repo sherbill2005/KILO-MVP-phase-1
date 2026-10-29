@@ -1,7 +1,7 @@
 /**
  * Central API & WebSocket Configuration for Kilo Mobile
  * Allows dynamic environment overrides via `EXPO_PUBLIC_WORKER_URL`
- * with a reliable fallback to the production Cloudflare Worker.
+ * and optional API key authentication via `EXPO_PUBLIC_WORKER_API_KEY`.
  */
 
 const DEFAULT_WORKER_HOST = 'kilo-worker.sherbill2005.workers.dev';
@@ -21,6 +21,21 @@ export const WORKER_HOST = normalizedHost;
 export const WORKER_HTTP_SCHEME = isLocal ? 'http' : 'https';
 export const WORKER_WS_SCHEME = isLocal ? 'ws' : 'wss';
 
+export const WORKER_API_KEY =
+  process.env.EXPO_PUBLIC_WORKER_API_KEY?.trim() ||
+  process.env.EXPO_PUBLIC_API_KEY?.trim() ||
+  '';
+
 export const WORKER_BASE_URL = `${WORKER_HTTP_SCHEME}://${WORKER_HOST}`;
 export const WORKER_API_BASE = `${WORKER_BASE_URL}/api`;
-export const LIVE_WS_URL = `${WORKER_WS_SCHEME}://${WORKER_HOST}/ws/ai/live`;
+export const LIVE_WS_URL = WORKER_API_KEY
+  ? `${WORKER_WS_SCHEME}://${WORKER_HOST}/ws/ai/live?token=${encodeURIComponent(WORKER_API_KEY)}`
+  : `${WORKER_WS_SCHEME}://${WORKER_HOST}/ws/ai/live`;
+
+export function getWorkerHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  if (WORKER_API_KEY) {
+    headers['Authorization'] = `Bearer ${WORKER_API_KEY}`;
+  }
+  return headers;
+}

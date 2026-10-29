@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { HeaderBar } from '../components/HeaderBar';
 import { WorkoutSession } from '../models/workout';
@@ -46,13 +46,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
-    await DatabaseService.init();
-    const [list, calculatedStats] = await Promise.all([
-      DatabaseService.getAllSessions(20, 0),
-      DatabaseService.getWorkoutStats(),
-    ]);
-    setSessions(list);
-    setStats(calculatedStats);
+    try {
+      await DatabaseService.init();
+      const [list, calculatedStats] = await Promise.all([
+        DatabaseService.getAllSessions(20, 0),
+        DatabaseService.getWorkoutStats(),
+      ]);
+      setSessions(list || []);
+      if (calculatedStats) {
+        setStats(calculatedStats);
+      }
+    } catch (e) {
+      console.warn('[HomeScreen] loadData error:', e);
+    }
   };
 
   useEffect(() => {
@@ -65,8 +71,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     setRefreshing(false);
   };
 
-  const draftSetsCount = draftSession
-    ? draftSession.groups.reduce((acc, g) => acc + g.sets.length, 0)
+  const draftSetsCount = draftSession && Array.isArray(draftSession.groups)
+    ? draftSession.groups.reduce((acc, g) => acc + (g?.sets?.length || 0), 0)
     : 0;
 
   return (
@@ -80,7 +86,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }
       >
         {/* Active Draft Recovery Banner */}
-        {draftSession && (
+        {draftSession && Array.isArray(draftSession.groups) && draftSession.groups.length > 0 && (
           <View style={styles.draftRecoveryBanner}>
             <View style={styles.draftIconContainer}>
               <RotateCcw size={20} color={COLORS.secondaryAccent} />
@@ -225,11 +231,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <Text style={styles.historyCountText}>{sessions.length} recorded</Text>
         </View>
 
-        {sessions.map((session, index) => {
-          const sessionVol = session.groups.reduce((gAcc, g) => {
-            return gAcc + g.sets.reduce((setAcc, set) => setAcc + set.weightValue * set.reps, 0);
+        {(sessions || []).map((session, index) => {
+          const sessionGroups = session.groups || [];
+          const sessionVol = sessionGroups.reduce((gAcc, g) => {
+            const groupSets = g?.sets || [];
+            return gAcc + groupSets.reduce((setAcc, set) => setAcc + (set.weightValue || 0) * (set.reps || 0), 0);
           }, 0);
-          const exercisesList = session.groups.map(g => g.exerciseName).join(', ');
+          const exercisesList = sessionGroups.map(g => g?.exerciseName).filter(Boolean).join(', ');
 
           return (
             <View key={session.id || index} style={styles.historyCard}>

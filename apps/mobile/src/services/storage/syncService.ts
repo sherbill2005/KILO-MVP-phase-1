@@ -1,6 +1,5 @@
 import { DatabaseService } from './database';
-import { WorkoutSession } from '../../models/workout';
-import { WORKER_API_BASE } from '../../config/api';
+import { WORKER_API_BASE, getWorkerHeaders } from '../../config/api';
 
 export interface SyncStatusResult {
   syncedCount: number;
@@ -27,7 +26,7 @@ export const SyncService = {
           const syncUrl = `${WORKER_API_BASE.replace(/\/api$/, '')}/api/workouts/sync-batch`;
           const syncRes = await fetch(syncUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getWorkerHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ session }),
           });
 
@@ -63,7 +62,9 @@ export const SyncService = {
       const url = userId
         ? `${WORKER_API_BASE}/sessions?user_id=${encodeURIComponent(userId)}`
         : `${WORKER_API_BASE}/sessions`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: getWorkerHeaders(),
+      });
       if (!res.ok) return [];
       const data = await res.json();
       return data.sessions || [];
@@ -76,7 +77,9 @@ export const SyncService = {
   // Fetch full hydrated session with groups and sets from Cloudflare Worker
   fetchRemoteSessionDetail: async (sessionId: string): Promise<any | null> => {
     try {
-      const res = await fetch(`${WORKER_API_BASE}/sessions/${sessionId}`);
+      const res = await fetch(`${WORKER_API_BASE}/sessions/${sessionId}`, {
+        headers: getWorkerHeaders(),
+      });
       if (!res.ok) return null;
       return await res.json();
     } catch (err) {
@@ -85,4 +88,3 @@ export const SyncService = {
     }
   },
 };
-

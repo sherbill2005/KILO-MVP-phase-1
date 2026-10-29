@@ -419,11 +419,19 @@ export const DatabaseService = {
   },
 
   getPendingSyncCount: async (): Promise<number> => {
+    if (Platform.OS === 'web') {
+      try {
+        const list = await DatabaseService.getAllSessions();
+        return list.filter(s => !s.isSynced).length;
+      } catch {
+        return 0;
+      }
+    }
     try {
       const db = await getDb();
       if (!db) return 0;
       const res = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM sync_queue'
+        'SELECT COUNT(*) as count FROM sessions WHERE is_synced = 0'
       );
       return res?.count || 0;
     } catch {

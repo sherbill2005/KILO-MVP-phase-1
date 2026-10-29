@@ -1,4 +1,4 @@
-  {
+{
   "name": "api-worker",
   "version": "1.0.0",
   "description": "Cloudflare Worker & Gemini Live proxy for Kilo",
@@ -15,5 +15,8 @@
     "typescript": "^5.8.0",
     "vitest": "^3.0.7",
     "wrangler": "^4.71.0"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }

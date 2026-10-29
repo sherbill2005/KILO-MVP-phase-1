@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 import { GroupedSetTable } from '../components/GroupedSetTable';
 import { RestTimerBar } from '../components/RestTimerBar';
@@ -40,6 +40,8 @@ export const LiveWorkoutScreen: React.FC<LiveWorkoutScreenProps> = ({ onFinish, 
     cancelActiveWorkout,
     setActiveExercise,
     logSet,
+    updateSetById,
+    deleteSetById,
     updateLastWeight,
     updateLastReps,
     deleteLastSet,
@@ -287,11 +289,11 @@ export const LiveWorkoutScreen: React.FC<LiveWorkoutScreenProps> = ({ onFinish, 
           groups={activeSession?.groups || []}
           activeExerciseName={activeExercise}
           onUpdateSet={(setId: string, newWeight: number, newReps: number) => {
-            updateLastWeight(newWeight);
-            updateLastReps(newReps);
+            updateSetById(setId, newWeight, newReps);
+
           }}
           onDeleteSet={(setId: string) => {
-            deleteLastSet();
+            deleteSetById(setId);
           }}
           onSelectExercise={(exName: string) => {
             setActiveExercise(exName);
